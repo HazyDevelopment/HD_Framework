@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>HD Inventory</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="hotbar" class="hidden"></div>
+
+<div id="inventory" class="hidden">
+    <div class="inv-wrap">
+        <div class="panel" id="panel-left">
+            <div class="panel-header">
+                <span class="panel-title" id="titleLeft">Inventory</span>
+                <div class="weight-bar"><div class="weight-fill" id="weightFillLeft"></div></div>
+                <span class="weight-text" id="weightTextLeft">0 / 0</span>
+            </div>
+            <div class="grid" id="grid-left"></div>
+        </div>
+        <div class="panel hidden" id="panel-right">
+            <div class="panel-header">
+                <span class="panel-title" id="titleRight">—</span>
+                <div class="weight-bar"><div class="weight-fill" id="weightFillRight"></div></div>
+                <span class="weight-text" id="weightTextRight">0 / 0</span>
+            </div>
+            <div class="grid" id="grid-right"></div>
+        </div>
+    </div>
+    <div class="hint">Drag to move/stack · Shift+drag to split · Right-click for actions · Drag off a panel to drop</div>
+</div>
+
+<div id="ghost" class="hidden"></div>
+<div id="tooltip" class="hidden"></div>
+
+<div id="contextMenu" class="hidden">
+    <button data-act="use">Use</button>
+    <button data-act="split">Split stack</button>
+    <button data-act="drop">Drop</button>
+</div>
+
+<div id="splitPrompt" class="hidden">
+    <div class="split-box">
+        <span id="splitLabel">Amount</span>
+        <input type="range" id="splitRange" min="1" max="1" value="1">
+        <span id="splitValue">1</span>
+        <div class="split-actions">
+            <button id="splitCancel">Cancel</button>
+            <button id="splitConfirm">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<script src="js/icons.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

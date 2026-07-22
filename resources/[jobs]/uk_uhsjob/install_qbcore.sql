@@ -1,0 +1,15 @@
+-- ===================================================================
+-- ukhs_job — QBCore install
+-- Run this if Config.Framework = "qbcore" in config.lua.
+--
+-- QBCore doesn't take job/grade definitions from SQL — those live in
+-- qb-core/shared/jobs.lua. See qbcore_job_snippet.lua in this resource
+-- for the "ambulance" job entry with all 10 UKHS ranks (0-9) already
+-- filled in to paste into that file.
+--
+-- No custom tables are needed under QBCore — duty is tracked natively
+-- via Player.Functions.SetJobDuty, and there's no evidence/fingerprint
+-- system in this resource (that's part of the police companion
+-- resource, uk_policejob). This file is here for completeness / in
+-- case you add your own UKHS-specific tables later.
+-- ===================================================================

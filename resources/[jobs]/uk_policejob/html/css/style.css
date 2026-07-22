@@ -1,0 +1,106 @@
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
+html, body { width: 100%; height: 100%; background: transparent; }
+.hidden { display: none !important; }
+
+#app {
+  --ukp-header: #0b2545;
+  --ukp-accent: #c8102e;
+  --ukp-bg: #f2f4f7;
+  --ukp-panel: #ffffff;
+  --ukp-text: #1b2430;
+  --ukp-text-secondary: #6b7688;
+  --ukp-border: #d7dce3;
+
+  position: absolute;
+  top: 8%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 62%;
+  height: 78%;
+  background: var(--ukp-bg);
+  border: 1px solid var(--ukp-header);
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  color: var(--ukp-text);
+}
+
+#topbar {
+  height: 56px;
+  background: var(--ukp-header);
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  border-bottom: 3px solid var(--ukp-accent);
+  flex-shrink: 0;
+}
+#brand-title { color: #fff; font-size: 16px; font-weight: 700; letter-spacing: 0.5px; }
+#close-btn {
+  margin-left: auto;
+  background: rgba(255,255,255,0.08);
+  border: none; color: #fff; font-size: 18px;
+  width: 30px; height: 30px; border-radius: 4px; cursor: pointer;
+}
+#close-btn:hover { background: var(--ukp-accent); }
+
+#body { flex: 1; display: flex; overflow: hidden; }
+
+#sidebar {
+  width: 170px;
+  background: var(--ukp-panel);
+  border-right: 1px solid var(--ukp-border);
+  display: flex; flex-direction: column;
+  padding: 14px 8px; gap: 4px; flex-shrink: 0;
+}
+.nav-btn {
+  background: transparent; border: none; text-align: left;
+  padding: 10px 12px; border-radius: 4px; font-size: 13px; font-weight: 600;
+  color: var(--ukp-text-secondary); cursor: pointer;
+}
+.nav-btn:hover { background: #eef1f6; }
+.nav-btn.active { background: var(--ukp-header); color: #fff; }
+
+#content { flex: 1; padding: 22px 26px; overflow-y: auto; }
+.view { display: none; }
+.view.active { display: block; }
+
+h1 { font-size: 19px; color: var(--ukp-header); margin-bottom: 4px; }
+.muted { color: var(--ukp-text-secondary); font-size: 13px; }
+
+.grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+.card { background: var(--ukp-panel); border: 1px solid var(--ukp-border); border-radius: 6px; padding: 14px 16px; }
+
+.section-title { font-size: 13px; font-weight: 700; color: var(--ukp-header); margin: 14px 0 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+.search-row { display: flex; gap: 10px; margin: 16px 0; }
+.search-row input, .form input, .form textarea {
+  flex: 1; padding: 9px 12px; border: 1px solid var(--ukp-border); border-radius: 4px;
+  font-size: 13px; background: #fff; color: var(--ukp-text); font-family: inherit;
+}
+.form input, .form textarea { width: 100%; margin-bottom: 12px; }
+.form label { font-size: 12px; font-weight: 600; color: var(--ukp-text-secondary); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px; }
+
+button.primary {
+  background: var(--ukp-header); color: #fff; border: none; padding: 10px 18px;
+  border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+button.primary:hover { filter: brightness(1.2); }
+button.secondary {
+  background: transparent; color: var(--ukp-text); border: 1px solid var(--ukp-border);
+  padding: 10px 18px; border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+button.secondary:hover { background: #eef1f6; }
+
+.result-list { display: flex; flex-direction: column; gap: 8px; }
+.result-row {
+  background: var(--ukp-panel); border: 1px solid var(--ukp-border); border-radius: 4px;
+  padding: 10px 14px; display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--ukp-text);
+}
+.result-row .rr-name { font-weight: 600; color: var(--ukp-header); }
+.result-row .rr-meta { color: var(--ukp-text-secondary); margin-left: auto; font-size: 12px; }
+.result-row button.small {
+  background: var(--ukp-header); color: #fff; border: none; padding: 6px 12px;
+  border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer;
+}

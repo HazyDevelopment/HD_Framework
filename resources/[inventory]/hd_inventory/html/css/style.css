@@ -1,0 +1,240 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: #EDEDED;
+    background: transparent;
+    overflow: hidden;
+    user-select: none;
+}
+
+.hidden { display: none !important; }
+
+/* ═══════════════════════════ HOTBAR ══════════════════════════════════ */
+#hotbar {
+    position: fixed;
+    left: 50%;
+    bottom: 22px;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    z-index: 5;
+}
+
+.hotbar-slot {
+    width: 54px;
+    height: 54px;
+    background: rgba(10, 11, 14, 0.75);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.hotbar-key {
+    position: absolute;
+    top: 3px;
+    left: 5px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #8B929C;
+}
+
+.hotbar-amount {
+    position: absolute;
+    bottom: 3px;
+    right: 5px;
+    font-size: 10.5px;
+    font-weight: 800;
+    background: rgba(0,0,0,0.6);
+    padding: 0 4px;
+    border-radius: 4px;
+}
+
+/* ═══════════════════════════ INVENTORY SHELL ═════════════════════════ */
+#inventory {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: rgba(0,0,0,0.35);
+}
+
+.inv-wrap {
+    display: flex;
+    gap: 16px;
+}
+
+.panel {
+    width: 380px;
+    background: rgba(14, 16, 20, 0.94);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: 0 16px 50px rgba(0,0,0,0.5);
+}
+
+.panel-header { margin-bottom: 10px; }
+.panel-title { font-size: 14px; font-weight: 800; letter-spacing: 0.02em; }
+
+.weight-bar {
+    width: 100%;
+    height: 6px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 6px 0 4px;
+}
+.weight-fill { height: 100%; background: #3E7CB1; width: 0%; transition: width 0.15s ease; }
+.weight-fill.over { background: #C4453A; }
+.weight-text { font-size: 10.5px; color: #9AA1AB; }
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+}
+
+.slot {
+    width: 64px;
+    height: 64px;
+    background: rgba(255,255,255,0.045);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 9px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+}
+.slot:hover { border-color: rgba(255,255,255,0.25); }
+.slot.drag-over { border-color: #3E7CB1; background: rgba(62,124,177,0.15); }
+.slot.empty { cursor: default; }
+
+.item-tile {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 800;
+    color: #fff;
+    background: var(--c, #3E7CB1);
+}
+.item-tile svg { width: 24px; height: 24px; flex-shrink: 0; }
+.hotbar-slot .item-tile { width: 34px; height: 34px; }
+.hotbar-slot .item-tile svg { width: 20px; height: 20px; }
+
+.item-amount {
+    position: absolute;
+    bottom: 3px;
+    right: 5px;
+    font-size: 10.5px;
+    font-weight: 800;
+    background: rgba(0,0,0,0.6);
+    padding: 0 4px;
+    border-radius: 4px;
+}
+
+.hint { font-size: 11px; color: #9AA1AB; background: rgba(0,0,0,0.4); padding: 5px 12px; border-radius: 20px; }
+
+/* ═══════════════════════════ GHOST (dragged item) ═════════════════════ */
+#ghost {
+    position: fixed;
+    width: 54px;
+    height: 54px;
+    border-radius: 9px;
+    pointer-events: none;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 800;
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+    opacity: 0.92;
+}
+#ghost svg { width: 28px; height: 28px; }
+
+/* ═══════════════════════════ TOOLTIP ═══════════════════════════════════ */
+#tooltip {
+    position: fixed;
+    max-width: 220px;
+    background: rgba(10,11,14,0.96);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 11.5px;
+    z-index: 90;
+    pointer-events: none;
+}
+.tooltip-title { font-weight: 800; margin-bottom: 3px; }
+.tooltip-desc { color: #9AA1AB; line-height: 1.35; }
+.tooltip-weight { color: #6D7480; margin-top: 4px; font-size: 10.5px; }
+
+/* ═══════════════════════════ CONTEXT MENU ══════════════════════════════ */
+#contextMenu {
+    position: fixed;
+    background: rgba(14,16,20,0.98);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    overflow: hidden;
+    z-index: 95;
+    display: flex;
+    flex-direction: column;
+    min-width: 130px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+#contextMenu button {
+    background: none;
+    border: none;
+    color: #EDEDED;
+    padding: 9px 12px;
+    text-align: left;
+    font-size: 12px;
+    cursor: pointer;
+}
+#contextMenu button:hover { background: rgba(255,255,255,0.08); }
+
+/* ═══════════════════════════ SPLIT PROMPT ═══════════════════════════════ */
+#splitPrompt {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.5);
+    z-index: 98;
+}
+.split-box {
+    background: #14161B;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 16px;
+    width: 240px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.split-box input[type="range"] { width: 100%; }
+.split-actions { display: flex; gap: 8px; }
+.split-actions button {
+    flex: 1;
+    padding: 8px;
+    border-radius: 7px;
+    border: none;
+    font-weight: 700;
+    font-size: 12px;
+    cursor: pointer;
+    color: #fff;
+}
+#splitCancel { background: rgba(255,255,255,0.1); color: #EDEDED; }
+#splitConfirm { background: #2E7D4F; }

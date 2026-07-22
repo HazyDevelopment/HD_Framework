@@ -1,0 +1,41 @@
+--[[
+    qbcore_job_snippet.lua
+
+    This is NOT loaded by ukhs_job — it's a reference snippet to paste
+    into your qb-core/shared/jobs.lua, replacing (or merging into)
+    your existing ["ambulance"] entry. Grade numbers match config.lua's
+    Config.Ranks exactly (0 = Student Paramedic ... 9 = Operations
+    Manager), so the armoury/garage/GPS grade gates line up with your
+    job automatically.
+
+    isboss = true on grade 9 gives the Operations Manager the QBCore
+    boss menu (society funds, hiring/firing, etc) — remove it if you
+    don't want that.
+
+    HOW TO USE: copy everything INSIDE the outer `return { ... }`
+    below (i.e. just the `["ambulance"] = { ... },` block) and paste
+    it into the Jobs table in qb-core/shared/jobs.lua, replacing your
+    existing ["ambulance"] entry. The `return { }` wrapper here only
+    exists so this file is valid Lua on its own (e.g. if a linter or
+    editor opens it) — don't paste that outer wrapper itself.
+]]
+
+return {
+    ["ambulance"] = {
+        label = "United Kingdom Health Service",
+        defaultDuty = false,
+        offDutyPay = false,
+        grades = {
+            [0] = { name = "Student Paramedic" },
+            [1] = { name = "Newly Qualified Paramedic" },
+            [2] = { name = "Paramedic" },
+            [3] = { name = "Specialist Paramedic" },
+            [4] = { name = "Advanced Paramedic" },
+            [5] = { name = "Clinical Team Leader" },
+            [6] = { name = "Duty Manager" },
+            [7] = { name = "Senior Duty Manager" },
+            [8] = { name = "Deputy Operations Manager" },
+            [9] = { name = "Operations Manager", isboss = true },
+        },
+    },
+}

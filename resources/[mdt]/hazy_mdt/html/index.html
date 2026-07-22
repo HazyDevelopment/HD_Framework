@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<title>MDT</title>
+</head>
+<body>
+<div id="app" class="hidden">
+  <div class="mdt">
+
+    <!-- ─────────── Sidebar ─────────── -->
+    <aside class="sidebar">
+      <div class="crest">
+        <div class="crest-badge" id="crestBadge">MDT</div>
+        <div class="crest-text">
+          <span id="brandName">MDT</span>
+          <small id="brandSub"></small>
+        </div>
+      </div>
+
+      <nav id="nav">
+        <button class="nav-btn active" data-page="dashboard"><span class="ico">▦</span>Dashboard</button>
+        <button class="nav-btn" data-page="civsearch"><span class="ico">☰</span>Civilian Search</button>
+        <button class="nav-btn" data-page="vehicles" id="navVehicles"><span class="ico">▤</span>Vehicle Check</button>
+        <button class="nav-btn" data-page="patients" id="navPatients"><span class="ico">✚</span>Patient Records</button>
+        <button class="nav-btn" data-page="newreport"><span class="ico">✎</span><span id="newReportLabel">New Report</span></button>
+        <button class="nav-btn" data-page="reports"><span class="ico">▣</span><span id="reportsLabel">Reports</span></button>
+        <button class="nav-btn" data-page="command" id="navCommand"><span class="ico">★</span>Command</button>
+        <button class="nav-btn" data-page="settings"><span class="ico">⚙</span>Settings</button>
+      </nav>
+
+      <div class="sidebar-foot">
+        <button class="duty-btn off" id="dutyBtn"><span class="dot"></span><span id="dutyLabel">OFF DUTY</span></button>
+        <div class="callsign-chip" id="callsignChip">NO CALLSIGN</div>
+        <div class="officer-name" id="officerName"></div>
+      </div>
+    </aside>
+
+    <!-- ─────────── Main ─────────── -->
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-title" id="pageTitle">Dashboard</div>
+        <div class="topbar-right">
+          <span class="clock" id="clock"></span>
+          <button class="close-btn" id="closeBtn">✕</button>
+        </div>
+      </header>
+
+      <section class="content">
+
+        <!-- Dashboard -->
+        <div class="page active" id="page-dashboard">
+          <div class="two-col">
+            <div class="panel">
+              <h3>Updates</h3>
+              <p class="muted small" id="updatesHint">Posted by command staff.</p>
+              <div class="list" id="updatesList"></div>
+            </div>
+            <div class="panel">
+              <h3>Live Feed</h3>
+              <div class="list" id="liveFeedList"><div class="empty">No live feed messages this shift.</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Civilian Search -->
+        <div class="page" id="page-civsearch">
+          <div class="searchbar">
+            <input id="civSearchInput" type="text" placeholder="Search by first name, last name or full name…">
+            <button class="btn accent" id="civSearchBtn">Search</button>
+          </div>
+          <div class="results" id="civResults"><div class="empty">Search the civilian database to begin.</div></div>
+          <div class="profile hidden" id="civProfile"></div>
+        </div>
+
+        <!-- Vehicle Check (police) -->
+        <div class="page" id="page-vehicles">
+          <div class="searchbar">
+            <input id="vehSearchInput" type="text" placeholder="Search by plate…">
+            <button class="btn accent" id="vehSearchBtn">Run Plate</button>
+          </div>
+          <div class="results" id="vehResults"><div class="empty">Run a plate to see registered owner and markers.</div></div>
+        </div>
+
+        <!-- Patient Records (UHS) -->
+        <div class="page" id="page-patients">
+          <div class="two-col">
+            <div class="panel">
+              <h3>New Patient Record</h3>
+              <label>Patient</label>
+              <div class="inline">
+                <input id="patSearchInput" type="text" placeholder="Search civilian by name…">
+                <button class="btn" id="patSearchBtn">Find</button>
+              </div>
+              <div class="chiprow" id="patSelected"></div>
+              <div class="mini-results" id="patSearchResults"></div>
+              <label>Blood type</label>
+              <select id="patBlood"></select>
+              <label>Attending nurses / doctors</label>
+              <input id="patStaff" type="text" placeholder="e.g. Dr. A. Shah, Nurse J. Cole">
+              <label>Medications</label>
+              <textarea id="patMeds" rows="2" placeholder="Prescribed or administered medication…"></textarea>
+              <label>Follow-up treatment</label>
+              <textarea id="patTreatment" rows="2" placeholder="Aftercare, referrals, next appointment…"></textarea>
+              <label>Notes</label>
+              <textarea id="patNotes" rows="3" placeholder="Clinical notes…"></textarea>
+              <button class="btn accent" id="patSaveBtn">Save Patient Record</button>
+              <div class="form-msg" id="patMsg"></div>
+            </div>
+            <div class="panel">
+              <h3>Search Patient Records</h3>
+              <div class="inline">
+                <input id="patRecSearch" type="text" placeholder="Patient name or ID…">
+                <button class="btn" id="patRecSearchBtn">Search</button>
+              </div>
+              <div class="list" id="patRecResults"><div class="empty">No records loaded.</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- New Report -->
+        <div class="page" id="page-newreport">
+          <div class="panel">
+            <h3 id="newReportHeading">New Report</h3>
+            <div class="grid-2">
+              <div>
+                <label>Report type</label>
+                <select id="repType"></select>
+              </div>
+              <div>
+                <label>Title</label>
+                <input id="repTitle" type="text" placeholder="Short title…">
+              </div>
+            </div>
+            <label>Involved persons</label>
+            <div class="inline">
+              <input id="repCivSearch" type="text" placeholder="Search civilian by name to attach…">
+              <button class="btn" id="repCivSearchBtn">Find</button>
+            </div>
+            <div class="chiprow" id="repInvolved"></div>
+            <div class="mini-results" id="repCivResults"></div>
+            <label>Report</label>
+            <textarea id="repContent" rows="10" placeholder="Write the full report here…"></textarea>
+            <button class="btn accent" id="repSaveBtn">File Report</button>
+            <div class="form-msg" id="repMsg"></div>
+          </div>
+        </div>
+
+        <!-- Reports -->
+        <div class="page" id="page-reports">
+          <div class="searchbar">
+            <input id="repSearchInput" type="text" placeholder="Search reports by title, content, officer or person involved…">
+            <button class="btn accent" id="repSearchBtn">Search</button>
+          </div>
+          <div class="results" id="repResults"><div class="empty">Search to load filed reports.</div></div>
+          <div class="profile hidden" id="repView"></div>
+        </div>
+
+        <!-- Command -->
+        <div class="page" id="page-command">
+          <div class="two-col">
+            <div class="panel">
+              <h3>Post Update</h3>
+              <label>Kind</label>
+              <select id="cmdKind">
+                <option value="update">General Update</option>
+                <option value="training">Training Update</option>
+              </select>
+              <label>Title</label>
+              <input id="cmdTitle" type="text" placeholder="Update title…">
+              <label>Message</label>
+              <textarea id="cmdMsg" rows="4" placeholder="This will appear on every officer's dashboard…"></textarea>
+              <button class="btn accent" id="cmdPostBtn">Post to Dashboard</button>
+              <div class="form-msg" id="cmdPostMsg"></div>
+              <hr>
+              <h3>Live Feed</h3>
+              <textarea id="cmdFeedMsg" rows="2" placeholder="Broadcast live to all on-duty staff…"></textarea>
+              <button class="btn accent" id="cmdFeedBtn">Broadcast</button>
+              <div class="form-msg" id="cmdFeedMsg2"></div>
+            </div>
+            <div class="panel" id="warrantPanel">
+              <h3>Issue Warrant</h3>
+              <div class="inline">
+                <input id="cmdCivSearch" type="text" placeholder="Search civilian…">
+                <button class="btn" id="cmdCivSearchBtn">Find</button>
+              </div>
+              <div class="chiprow" id="cmdCivSelected"></div>
+              <div class="mini-results" id="cmdCivResults"></div>
+              <label>Reason for warrant</label>
+              <textarea id="cmdWarrantReason" rows="3" placeholder="Grounds for the warrant…"></textarea>
+              <button class="btn danger" id="cmdWarrantBtn">Issue Warrant</button>
+              <div class="form-msg" id="cmdWarrantMsg"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settings -->
+        <div class="page" id="page-settings">
+          <div class="two-col">
+            <div class="panel">
+              <h3>Callsign</h3>
+              <label>Your callsign</label>
+              <input id="setCallsign" type="text" maxlength="20" placeholder="e.g. TANGO-21">
+              <h3 class="mt">Theme</h3>
+              <label>Appearance</label>
+              <div class="theme-row">
+                <button class="btn theme-pick" data-theme="default">Department</button>
+                <button class="btn theme-pick" data-theme="light">Light</button>
+                <button class="btn theme-pick" data-theme="dark">Dark</button>
+                <button class="btn theme-pick" data-theme="custom">Custom</button>
+              </div>
+              <div id="customColors" class="hidden">
+                <label>Header colour</label>
+                <input id="setHeaderColor" type="color" value="#0B2447">
+                <label>Background colour</label>
+                <input id="setBgColor" type="color" value="#132B4D">
+              </div>
+              <div class="inline mt">
+                <button class="btn accent" id="setSaveBtn">Save Settings</button>
+                <button class="btn" id="setResetBtn">Reset to Default</button>
+              </div>
+              <div class="form-msg" id="setMsg"></div>
+            </div>
+            <div class="panel">
+              <h3>Preview</h3>
+              <p class="muted small">Changes apply instantly. Text colour adapts automatically so writing stays visible on light, dark and custom colours.</p>
+              <div class="preview-card">
+                <div class="preview-header">Header</div>
+                <div class="preview-body">
+                  <p>Body text sample — the quick brown fox.</p>
+                  <span class="tag">TAG</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+    </main>
+  </div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>

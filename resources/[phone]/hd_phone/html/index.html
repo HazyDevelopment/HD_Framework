@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>HD Phone</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="phone" class="hidden">
+    <div class="statusbar">
+        <span id="clock">--:--</span>
+        <span class="statusbar-right">
+            <span id="myNumberTag">—</span>
+        </span>
+    </div>
+
+    <div class="topbar">
+        <button class="nav-btn hidden" id="backBtn">‹</button>
+        <span class="topbar-title" id="screenTitle">HD Phone</span>
+        <button class="nav-btn" id="homeBtn">⌂</button>
+    </div>
+
+    <div class="content">
+
+        <!-- HOME -->
+        <section id="screen-home" class="screen">
+            <div class="app-grid">
+                <button class="app-icon" data-app="phone"><span class="icon-tile" style="--c:#2E7D4F">☎</span><span>Phone</span></button>
+                <button class="app-icon" data-app="messages"><span class="icon-tile" style="--c:#3E7CB1">✉</span><span>Messages</span></button>
+                <button class="app-icon" data-app="contacts"><span class="icon-tile" style="--c:#6D7480">☰</span><span>Contacts</span></button>
+                <button class="app-icon" data-app="wire"><span class="icon-tile" style="--c:#1B8CD1">W</span><span>Wire</span></button>
+                <button class="app-icon" data-app="picta"><span class="icon-tile" style="--c:#C0388D">P</span><span>Picta</span></button>
+                <button class="app-icon" data-app="loopz"><span class="icon-tile" style="--c:#B03A3A">L</span><span>Loopz</span></button>
+                <button class="app-icon" data-app="garages"><span class="icon-tile" style="--c:#D8892B">G</span><span>Garages</span></button>
+            </div>
+        </section>
+
+        <!-- CONTACTS -->
+        <section id="screen-contacts" class="screen hidden">
+            <button class="wide-btn" id="addContactBtn">+ New Contact</button>
+            <div class="list" id="contactsList"></div>
+        </section>
+
+        <!-- DIALER -->
+        <section id="screen-dialer" class="screen hidden">
+            <input type="text" id="dialInput" class="dial-input" placeholder="Enter number" inputmode="numeric">
+            <div class="dialpad" id="dialpad"></div>
+            <button class="wide-btn call-btn" id="dialCallBtn">Call</button>
+        </section>
+
+        <!-- IN CALL -->
+        <section id="screen-incall" class="screen hidden">
+            <div class="incall-box">
+                <div class="incall-avatar">☎</div>
+                <div class="incall-name" id="incallName">—</div>
+                <div class="incall-status" id="incallStatus">Ringing...</div>
+                <div class="incall-actions" id="incallActions"></div>
+            </div>
+        </section>
+
+        <!-- MESSAGES (threads) -->
+        <section id="screen-messages" class="screen hidden">
+            <button class="wide-btn" id="newMessageBtn">+ New Message</button>
+            <div class="list" id="threadsList"></div>
+        </section>
+
+        <!-- CONVERSATION -->
+        <section id="screen-conversation" class="screen hidden">
+            <div class="conversation-thread" id="conversationThread"></div>
+            <div class="composer">
+                <input type="text" id="messageInput" placeholder="Message...">
+                <button id="sendMessageBtn">Send</button>
+            </div>
+        </section>
+
+        <!-- SOCIAL FEED (shared by wire/picta/loopz) -->
+        <section id="screen-feed" class="screen hidden">
+            <div class="composer social-composer">
+                <textarea id="postContent" maxlength="280" placeholder="What's happening?"></textarea>
+                <input type="text" id="postImage" class="hidden" placeholder="Image URL (optional)">
+                <button id="postSubmitBtn">Post</button>
+            </div>
+            <div class="list" id="feedList"></div>
+        </section>
+
+        <!-- GARAGES -->
+        <section id="screen-garages" class="screen hidden">
+            <div class="list" id="garagesList"></div>
+        </section>
+
+    </div>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>

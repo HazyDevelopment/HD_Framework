@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>UKP Terminal</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="app" class="hidden">
+  <div id="topbar">
+    <span id="brand-title"></span>
+    <button id="close-btn" title="Close">&times;</button>
+  </div>
+
+  <div id="body">
+    <nav id="sidebar">
+      <button class="nav-btn" data-view="armoury">Armoury</button>
+      <button class="nav-btn" data-view="garage">Garage</button>
+      <button class="nav-btn" data-view="evidence">Evidence Locker</button>
+      <button class="nav-btn" data-view="gps">GPS Tracker</button>
+    </nav>
+
+    <main id="content">
+
+      <section id="view-armoury" class="view">
+        <h1>Armoury</h1>
+        <p class="muted" id="armoury-rank"></p>
+        <div class="grid-2" style="margin-top:14px;">
+          <div class="card">
+            <div class="section-title">Weapons</div>
+            <div id="armoury-weapons" class="result-list"></div>
+          </div>
+          <div class="card">
+            <div class="section-title">Equipment</div>
+            <div id="armoury-items" class="result-list"></div>
+          </div>
+        </div>
+        <button class="primary" id="draw-loadout-btn" style="margin-top:16px;">Draw full loadout</button>
+      </section>
+
+      <section id="view-garage" class="view">
+        <h1>Vehicle garage</h1>
+        <p class="muted">Vehicles are locked to your rank — anything below is what you're currently cleared to pull.</p>
+        <div id="garage-list" class="result-list" style="margin-top:14px;"></div>
+        <button class="secondary" id="return-vehicle-btn" style="margin-top:16px;">Return nearest vehicle</button>
+      </section>
+
+      <section id="view-evidence" class="view">
+        <h1>Evidence locker</h1>
+        <div class="form">
+          <label>Case number</label>
+          <input type="text" id="ev-case">
+          <label>Item</label>
+          <input type="text" id="ev-item" placeholder="e.g. Bloodstained knife">
+          <label>Description</label>
+          <textarea id="ev-desc" rows="4"></textarea>
+          <button class="primary" id="ev-add-btn">Log evidence</button>
+          <span id="ev-status" class="muted"></span>
+        </div>
+
+        <div class="section-title">Search by case number</div>
+        <div class="search-row">
+          <input type="text" id="ev-search-input" placeholder="Case number...">
+          <button class="primary" id="ev-search-btn">Search</button>
+        </div>
+        <div id="ev-results" class="result-list"></div>
+      </section>
+
+      <section id="view-gps" class="view">
+        <h1>GPS tracker</h1>
+        <p class="muted">Live on-duty units. Set a waypoint to pull up a route.</p>
+        <div id="gps-list" class="result-list" style="margin-top:14px;"></div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>

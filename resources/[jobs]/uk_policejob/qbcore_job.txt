@@ -1,0 +1,47 @@
+--[[
+    qbcore_job_snippet.lua
+
+    This is NOT loaded by ukp_job — it's a reference snippet to paste
+    into your qb-core/shared/jobs.lua, replacing (or merging into)
+    your existing ["police"] entry. Grade numbers match config.lua's
+    Config.Ranks exactly (0 = PCSO ... 15 = Commissioner), so the
+    armoury/garage/GPS grade gates line up with your job automatically.
+
+    isboss = true on grade 15 gives the Commissioner the QBCore boss
+    menu (society funds, hiring/firing, etc) — remove it if you don't
+    want that.
+
+    HOW TO USE: copy everything INSIDE the outer `return { ... }`
+    below (i.e. just the `["police"] = { ... },` block) and paste it
+    into the Jobs table in qb-core/shared/jobs.lua, replacing your
+    existing ["police"] entry. The `return { }` wrapper here only
+    exists so this file is valid Lua on its own (e.g. if a linter or
+    editor opens it) — don't paste that outer wrapper itself.
+]]
+
+return {
+    ["police"] = {
+        label = "United Kingdom Police",
+        type = "leo",
+        defaultDuty = false,
+        offDutyPay = false,
+        grades = {
+            [0]  = { name = "PCSO" },
+            [1]  = { name = "Police Constable" },
+            [2]  = { name = "Sergeant" },
+            [3]  = { name = "Inspector" },
+            [4]  = { name = "Chief Inspector" },
+            [5]  = { name = "Armed Response Officer" },
+            [6]  = { name = "ARV Sergeant" },
+            [7]  = { name = "ARV Inspector" },
+            [8]  = { name = "ARV Commander" },
+            [9]  = { name = "Superintendent" },
+            [10] = { name = "Chief Superintendent" },
+            [11] = { name = "Commander" },
+            [12] = { name = "Deputy Assistant Commissioner" },
+            [13] = { name = "Assistant Commissioner" },
+            [14] = { name = "Deputy Commissioner" },
+            [15] = { name = "Commissioner", isboss = true },
+        },
+    },
+}

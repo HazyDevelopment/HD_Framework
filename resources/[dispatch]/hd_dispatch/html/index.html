@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>HD Dispatch</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="toasts"></div>
+
+<div id="board" class="hidden">
+    <div class="board-header">
+        <div class="board-title">
+            <span class="board-title-main">HD DISPATCH</span>
+            <span class="board-title-sub" id="boardSub">—</span>
+        </div>
+        <button class="icon-btn" id="boardClose">✕</button>
+    </div>
+    <div class="board-tabs" id="boardTabs"></div>
+    <div class="board-list" id="boardList"></div>
+</div>
+
+<div id="callMenu" class="hidden">
+    <div class="menu-box">
+        <div class="menu-header">
+            <span id="menuTitle">Report an emergency</span>
+            <button class="icon-btn" id="menuClose">✕</button>
+        </div>
+
+        <div id="menu999" class="menu-body hidden">
+            <div class="menu-choice-row">
+                <button class="choice-btn" data-type="police" id="choicePolice">
+                    <span class="choice-code">POLICE</span>
+                    <span class="choice-label">United Kingdom Police</span>
+                </button>
+                <button class="choice-btn" data-type="ems" id="choiceEms">
+                    <span class="choice-code">UHS</span>
+                    <span class="choice-label">United Kingdom Health Service</span>
+                </button>
+            </div>
+            <label class="field-label">What's happening?</label>
+            <textarea id="desc999" maxlength="200" placeholder="Describe the emergency and your location if you can..."></textarea>
+            <div class="menu-actions">
+                <button class="btn-cancel" id="cancel999">Cancel</button>
+                <button class="btn-submit" id="submit999">Call it in</button>
+            </div>
+        </div>
+
+        <div id="menuRecovery" class="menu-body hidden">
+            <div class="field-row">
+                <label class="field-label">Vehicle</label>
+                <div class="plate-chip" id="recoveryPlate">—</div>
+            </div>
+            <label class="field-label">What's wrong with it?</label>
+            <textarea id="descRecovery" maxlength="200" placeholder="e.g. won't start, crashed, out of fuel..."></textarea>
+            <div class="menu-actions">
+                <button class="btn-cancel" id="cancelRecovery">Cancel</button>
+                <button class="btn-submit" id="submitRecovery">Request recovery</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>

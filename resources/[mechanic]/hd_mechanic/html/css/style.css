@@ -1,0 +1,151 @@
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+
+html, body { width: 100%; height: 100%; background: transparent; overflow: hidden; }
+
+.hidden { display: none !important; }
+
+#app {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#panel {
+    width: 420px;
+    max-height: 82vh;
+    background: rgba(14, 16, 20, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+}
+
+#header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 18px;
+    background: rgba(10, 11, 14, 0.9);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+#header h2 { font-size: 17px; color: #eceff3; letter-spacing: 0.5px; }
+#header span { font-size: 12px; color: #7d848f; text-transform: uppercase; }
+
+.banner {
+    background: rgba(162, 54, 54, 0.85);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    padding: 8px 14px;
+}
+
+#body.content {
+    padding: 18px;
+    overflow-y: auto;
+    color: #d7dbe0;
+}
+
+.section { margin-bottom: 18px; }
+.section h3 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #7d848f;
+    margin-bottom: 10px;
+}
+
+.bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.bar-row label { width: 78px; font-size: 12px; color: #9aa1ab; flex-shrink: 0; }
+.bar-row span { width: 36px; text-align: right; font-size: 12px; color: #d7dbe0; flex-shrink: 0; }
+
+.bar {
+    flex: 1;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    overflow: hidden;
+}
+.bar-fill {
+    height: 100%;
+    background: #2E7D4F;
+    width: 0%;
+    transition: width 0.2s;
+}
+.bar-fill.warn { background: #b8860b; }
+.bar-fill.bad { background: #A23636; }
+.bar-fill.inverse { background: #3E7CB1; }
+
+.tyre-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+.tyre {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    padding: 8px;
+    text-align: center;
+    font-size: 11px;
+    color: #9aa1ab;
+}
+.tyre.burst { border-color: #A23636; color: #e0655a; background: rgba(162, 54, 54, 0.12); }
+.tyre.ok { border-color: #2E7D4F; color: #6fbf8f; background: rgba(46, 125, 79, 0.1); }
+
+.compliance-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    font-size: 13px;
+}
+.compliance-label { color: #9aa1ab; }
+.compliance-status.valid { color: #6fbf8f; }
+.compliance-status.invalid { color: #e0655a; }
+
+.btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.btn {
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #d7dbe0;
+    padding: 9px 12px;
+    border-radius: 5px;
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: background 0.15s;
+    flex: 1;
+    min-width: 110px;
+}
+.btn:hover { background: rgba(255, 255, 255, 0.13); }
+.btn-sm { padding: 6px 10px; font-size: 12px; flex: none; min-width: 0; }
+.btn-ghost { background: transparent; border: none; font-size: 18px; }
+.btn-success { background: rgba(46, 125, 79, 0.85); border-color: #2E7D4F; color: #fff; }
+.btn-success:hover { background: #2E7D4F; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.hint { font-size: 11.5px; color: #6b7178; margin-top: 8px; }
+
+#toast {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(14, 16, 20, 0.95);
+    border: 1px solid rgba(62, 124, 177, 0.5);
+    color: #eceff3;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    z-index: 999;
+}
+
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 4px; }
