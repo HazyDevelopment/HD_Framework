@@ -85,9 +85,12 @@ a fuller `Locales['en']` table in there if you want prettier strings.
 3. Also import `resources/[mdt]/hazy_mdt/sql/install_qbcore.sql` (MDT's own tables) and
    `resources/[jobs]/uk_policejob/install_qbcore.sql` + `resources/[jobs]/uk_uhsjob/install_qbcore.sql`
    (fingerprint table is already included in `hd_framework_install.sql`, but check each job's own SQL file for anything extra).
-4. Copy `server.cfg` next to your `resources` folder (or merge it into your existing one), fill in
-   `sv_licenseKey`, `mysql_connection_string`, and your admin license under `add_principal`.
-5. Start the server. Console should print `Database verified. Ready.` from `HD_Framework`, `hd_inventory` and `hd_phone`.
+4. Copy `server.cfg.example` to `server.cfg` (the real `server.cfg` is gitignored on purpose — it
+   ends up holding your actual license key and DB credentials, which should never get committed),
+   fill in `sv_licenseKey` (free, from [Keymaster](https://keymaster.fivem.net)),
+   `mysql_connection_string`, and your admin license under `add_principal`.
+5. Start the server. Console should print `Database verified. Ready.` from `HD_Framework`,
+   `hd_inventory`, `hd_phone`, `hd_admin`, and `hd_mechanic`.
 
 ## Jobs & ranks (`resources/[hd]/HD_Framework/shared/jobs.lua`)
 

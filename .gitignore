@@ -1,0 +1,11 @@
+# Contains a real sv_licenseKey and live DB credentials — never commit this.
+# Copy server.cfg.example to server.cfg and fill in your own values.
+server.cfg
+
+server-boot.log
+server-boot-err.log
+
+# External resources, deliberately not bundled — see README's Install
+# section (oxmysql, pma-voice). Fetch your own copy from upstream.
+resources/\[hd\]/oxmysql/
+resources/\[voice\]/pma-voice/
