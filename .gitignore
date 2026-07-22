@@ -5,6 +5,10 @@ server.cfg
 server-boot.log
 server-boot-err.log
 
+# FXServer runtime artifacts, created on first boot — not source.
+cache/
+.replxx_history
+
 # External resources, deliberately not bundled — see README's Install
 # section (oxmysql, pma-voice). Fetch your own copy from upstream.
 resources/\[hd\]/oxmysql/

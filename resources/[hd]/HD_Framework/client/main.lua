@@ -15,6 +15,26 @@ function HD.Functions.GetPlayerData()
     return HD.PlayerData
 end
 
+-- ═══════════════════════════ CALLBACKS ═══════════════════════════════
+-- Client half of the standard QBCore.Functions.CreateCallback/
+-- TriggerCallback pattern — see server/main.lua for why this exists.
+local PendingCallbacks = {}
+local NextCallbackId = 0
+
+function HD.Functions.TriggerCallback(name, cb, ...)
+    NextCallbackId = NextCallbackId + 1
+    local requestId = NextCallbackId
+    PendingCallbacks[requestId] = cb
+    TriggerServerEvent('QBCore:Server:TriggerCallback', name, requestId, ...)
+end
+
+RegisterNetEvent('QBCore:Client:TriggerCallback', function(requestId, ...)
+    local cb = PendingCallbacks[requestId]
+    if not cb then return end
+    PendingCallbacks[requestId] = nil
+    cb(...)
+end)
+
 exports('GetCoreObject', function() return HD end)
 
 -- ═══════════════════════════ READY HANDSHAKE ═════════════════════════

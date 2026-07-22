@@ -187,6 +187,30 @@ function HD.Functions.GetQBPlayers()
     return HD.Players -- alias for QBCore-ecosystem code expecting QBCore.Functions.GetQBPlayers()
 end
 
+-- ═══════════════════════════ CALLBACKS ═══════════════════════════════
+-- Standard QBCore.Functions.CreateCallback/TriggerCallback pattern —
+-- a real gap this had until a live boot test against uk_uhsjob (a
+-- genuine compiled QBCore-ecosystem resource) surfaced it: its bridge
+-- calls Framework.Functions.CreateCallback expecting it to exist like
+-- every other Functions.* method. Event names match real QBCore's own
+-- convention exactly, so any off-the-shelf QBCore resource using this
+-- pattern works without modification, same reasoning as the mirrored
+-- QBCore:Server:* events above.
+local Callbacks = {}
+
+function HD.Functions.CreateCallback(name, cb)
+    Callbacks[name] = cb
+end
+
+RegisterNetEvent('QBCore:Server:TriggerCallback', function(name, requestId, ...)
+    local src = source
+    local cb = Callbacks[name]
+    if not cb then return end
+    cb(src, function(...)
+        TriggerClientEvent('QBCore:Client:TriggerCallback', src, requestId, ...)
+    end, ...)
+end)
+
 -- ═══════════════════════════ AUTO-SAVE ═══════════════════════════════
 CreateThread(function()
     while true do

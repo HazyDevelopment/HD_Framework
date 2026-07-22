@@ -9,6 +9,11 @@ sv_maxclients 48
 sv_licenseKey "changeme-get-one-at-keymaster.fivem.net"
 sets sv_projectName "HD Framework"
 
+# pma-voice refuses to start without this — discovered via a live boot
+# test, not just documentation. Also generally expected on any modern
+# FXServer setup.
+set onesync on
+
 set mysql_connection_string "mysql://user:password@localhost/hd_framework?charset=utf8mb4"
 
 add_ace group.admin command allow
