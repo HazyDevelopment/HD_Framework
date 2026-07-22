@@ -10,8 +10,8 @@ Jobs = {}  -- cached from Framework.Shared.Jobs — HD_Framework's shared/jobs.l
 Items = {} -- same deal, from Framework.Shared.Items
 
 CreateThread(function()
-    while GetResourceState('qb-core') ~= 'started' do Wait(100) end
-    Framework = exports['qb-core']:GetCoreObject()
+    while GetResourceState('HD_Framework') ~= 'started' do Wait(100) end
+    Framework = exports['HD_Framework']:GetCoreObject()
     Jobs = Framework.Shared and Framework.Shared.Jobs or {}
     Items = Framework.Shared and Framework.Shared.Items or {}
 end)

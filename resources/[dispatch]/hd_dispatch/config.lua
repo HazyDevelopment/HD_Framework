@@ -5,7 +5,7 @@ Config = {}
 --  Advanced dispatch: 999 calls route to United Kingdom Police /
 --  United Kingdom Health Service, and vehicle breakdowns route to
 --  recovery. Talks to the framework the same way every other resource
---  in this ecosystem does — exports['qb-core']:GetCoreObject() — so
+--  in this ecosystem does — exports['HD_Framework']:GetCoreObject() — so
 --  it needs zero changes if HD_Framework's internals ever change.
 -- ═══════════════════════════════════════════════════════════════════
 

@@ -11,11 +11,9 @@ HD.Shared = { Jobs = Jobs, Items = Items }
 HD.Functions = {}
 
 -- ═══════════════════════════ CORE OBJECT EXPORT ═════════════════════
--- exports['HD_Framework']:GetCoreObject() is the "native" way to reach
--- HD_Framework. The sibling qb-core resource forwards
--- exports['qb-core']:GetCoreObject() to this same object so nothing
--- built against the QBCore convention needs to know HD_Framework
--- exists.
+-- exports['HD_Framework']:GetCoreObject() is the only way to reach the
+-- core — every HD resource in this server calls it directly, no
+-- qb-core (or other framework-name) bridge in between.
 exports('GetCoreObject', function() return HD end)
 
 -- ═══════════════════════════ DB VERIFY ═══════════════════════════════
@@ -190,12 +188,11 @@ end
 -- ═══════════════════════════ CALLBACKS ═══════════════════════════════
 -- Standard QBCore.Functions.CreateCallback/TriggerCallback pattern —
 -- a real gap this had until a live boot test against uk_uhsjob (a
--- genuine compiled QBCore-ecosystem resource) surfaced it: its bridge
--- calls Framework.Functions.CreateCallback expecting it to exist like
--- every other Functions.* method. Event names match real QBCore's own
+-- genuine QBCore-ecosystem resource) surfaced it: its bridge calls
+-- Framework.Functions.CreateCallback expecting it to exist like every
+-- other Functions.* method. Event names match real QBCore's own
 -- convention exactly, so any off-the-shelf QBCore resource using this
--- pattern works without modification, same reasoning as the mirrored
--- QBCore:Server:* events above.
+-- pattern works without modification.
 local Callbacks = {}
 
 function HD.Functions.CreateCallback(name, cb)

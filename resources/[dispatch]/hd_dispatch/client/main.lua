@@ -8,8 +8,8 @@
 
 local Framework = nil
 CreateThread(function()
-    while GetResourceState('qb-core') ~= 'started' do Wait(100) end
-    Framework = exports['qb-core']:GetCoreObject()
+    while GetResourceState('HD_Framework') ~= 'started' do Wait(100) end
+    Framework = exports['HD_Framework']:GetCoreObject()
 end)
 
 local nuiOpen = false      -- dispatch board
@@ -187,10 +187,11 @@ RegisterNetEvent('hd_dispatch:client:callConfirmed', function(_, label)
     Config.Notify(('Your call has been logged with %s dispatch.'):format(label), 'success')
 end)
 
--- Re-sync whenever job/duty changes (mirrored from HD_Framework via
--- the qb-core bridge) so going on duty picks up existing calls and
--- going off duty / changing job clears ones you're no longer eligible for.
-AddEventHandler('QBCore:Client:OnPlayerDataUpdate', function()
+-- Re-sync whenever job/duty changes (HD_Framework's own event, fired
+-- directly — no bridge in between) so going on duty picks up existing
+-- calls and going off duty / changing job clears ones you're no
+-- longer eligible for.
+AddEventHandler('HD:Client:OnPlayerDataUpdate', function()
     if IsEligibleResponder() then
         TriggerServerEvent('hd_dispatch:server:requestSync')
     else

@@ -4,9 +4,12 @@
 --  talks to: Player.PlayerData (read) and Player.Functions.* (write).
 --  Field names deliberately mirror the QBCore player object shape
 --  (PlayerData.citizenid / charinfo / job.grade.level / job.isboss,
---  Functions.AddMoney/RemoveMoney/SetJob/SetJobDuty) so hazy_mdt,
---  uk_policejob and uk_uhsjob work against it unmodified via the
---  qb-core bridge resource.
+--  Functions.AddMoney/RemoveMoney/SetJob/SetJobDuty) so hazy_mdt and
+--  uk_uhsjob (both call exports['HD_Framework']:GetCoreObject()
+--  directly, no bridge resource) work against it with zero API
+--  changes. uk_policejob is compiled/escrowed and hardcoded to call
+--  exports['qb-core'] specifically, so it can't be reached this way —
+--  see README for that limitation.
 -- ═══════════════════════════════════════════════════════════════════
 
 function HD.Functions.CreatePlayerObject(src, data)

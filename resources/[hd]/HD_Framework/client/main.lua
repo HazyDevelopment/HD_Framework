@@ -1,9 +1,8 @@
 -- ═══════════════════════════════════════════════════════════════════
 --  HD_FRAMEWORK | CLIENT CORE
---  Holds the client's cached copy of PlayerData and exposes the same
---  Functions.GetPlayerData() shape QBCore ships, so hazy_mdt's client
---  (Framework.Functions.GetPlayerData()) and any other QBCore-client
---  script works unmodified via the qb-core bridge resource.
+--  Holds the client's cached copy of PlayerData and exposes it via
+--  Functions.GetPlayerData(), reached directly through
+--  exports['HD_Framework']:GetCoreObject() — no bridge resource.
 -- ═══════════════════════════════════════════════════════════════════
 
 HD = {}

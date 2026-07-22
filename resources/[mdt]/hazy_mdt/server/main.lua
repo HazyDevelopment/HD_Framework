@@ -5,9 +5,9 @@
 local Framework, FrameworkName = nil, nil
 
 CreateThread(function()
-    if Config.Framework == 'qb' or (Config.Framework == 'auto' and GetResourceState('qb-core') == 'started') then
-        FrameworkName = 'qb'
-        Framework = exports['qb-core']:GetCoreObject()
+    if Config.Framework == 'hd' or (Config.Framework == 'auto' and GetResourceState('HD_Framework') == 'started') then
+        FrameworkName = 'hd'
+        Framework = exports['HD_Framework']:GetCoreObject()
     elseif Config.Framework == 'esx' or (Config.Framework == 'auto' and GetResourceState('es_extended') == 'started') then
         FrameworkName = 'esx'
         Framework = exports['es_extended']:getSharedObject()
@@ -73,7 +73,7 @@ end)
 
 -- ─────────────────────────── Player helpers ───────────────────────
 local function GetChar(src)
-    if FrameworkName == 'qb' then
+    if FrameworkName == 'hd' then
         local P = Framework.Functions.GetPlayer(src)
         if not P then return nil end
         return {
@@ -139,7 +139,7 @@ end
 -- ─────────────────────────── Civilian lookups ─────────────────────
 local function SearchCivilians(term)
     term = '%' .. (term or '') .. '%'
-    if FrameworkName == 'qb' then
+    if FrameworkName == 'hd' then
         local rows = MySQL.query.await([[
             SELECT citizenid, charinfo, metadata FROM players
             WHERE JSON_UNQUOTE(JSON_EXTRACT(charinfo, '$.firstname')) LIKE ?
@@ -191,7 +191,7 @@ end
 
 local function SearchVehicles(term)
     term = '%' .. (term or '') .. '%'
-    if FrameworkName == 'qb' then
+    if FrameworkName == 'hd' then
         local rows = MySQL.query.await([[
             SELECT pv.plate, pv.vehicle, p.charinfo FROM player_vehicles pv
             LEFT JOIN players p ON p.citizenid = pv.citizenid
@@ -251,7 +251,7 @@ Handlers.toggleDuty = function(src, char, deptKey, dept, data)
 
     -- Optionally sync the framework's own duty flag
     if Config.Duty.SyncFramework then
-        if FrameworkName == 'qb' then
+        if FrameworkName == 'hd' then
             local P = Framework.Functions.GetPlayer(src)
             if P and P.Functions.SetJobDuty then P.Functions.SetJobDuty(newState) end
         elseif FrameworkName == 'esx' then

@@ -1,16 +1,12 @@
 -- ═══════════════════════════════════════════════════════════════════
---  QB-CORE COMPATIBILITY BRIDGE | LOCALE SHIM
---  uk_policejob and uk_uhsjob are compiled/escrowed resources that
---  hard-require '@qb-core/shared/locale.lua' as a file include (see
---  their fxmanifest.lua shared_scripts). This file exists purely so
---  that include resolves and both resources start — it's a minimal,
+--  LOCALE SHIM
+--  Previously included from an external 'qb-core' bridge resource
+--  (@qb-core/shared/locale.lua); now self-contained since this server
+--  no longer runs a qb-core-named resource at all. A minimal,
 --  never-throws translation shim, not a reproduction of any specific
 --  third-party locale file. Anything not registered in Locales['en']
---  just falls back to showing the raw key, which is harmless.
---
---  If you'd rather have proper English strings everywhere those two
---  resources use Lang:t(...), drop a real populated Locales['en']
---  table in here — nothing else needs to change.
+--  just falls back to showing the raw key, which is harmless. Drop a
+--  real populated Locales['en'] table in here for proper strings.
 -- ═══════════════════════════════════════════════════════════════════
 
 Locales = Locales or {}
@@ -31,8 +27,6 @@ function Lang:t(key, subs)
     return interpolate(str, subs)
 end
 
--- Some QBCore-ecosystem resources call a global _() helper instead of
--- Lang:t(...) directly.
 function _(key, subs)
     return Lang:t(key, subs)
 end

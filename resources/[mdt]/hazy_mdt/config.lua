@@ -5,7 +5,8 @@ Config = {}
 --  This file is escrow_ignore'd — customise everything below freely.
 -- ═══════════════════════════════════════════════════════════════════
 
--- Framework: 'auto' detects QBCore or ESX at runtime. Force with 'qb' / 'esx'.
+-- Framework: 'auto' detects HD_Framework or ESX at runtime (checks for
+-- a resource literally named HD_Framework). Force with 'hd' / 'esx'.
 Config.Framework = 'auto'
 
 -- How the MDT opens

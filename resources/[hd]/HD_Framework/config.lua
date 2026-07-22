@@ -2,14 +2,14 @@ Config = {}
 
 -- ═══════════════════════════════════════════════════════════════════
 --  HD_FRAMEWORK | HAZY DEVELOPMENT | v1.0.0
---  Core UK-themed roleplay framework, forked in spirit from QBCore.
---  This resource is the source of truth for player data, money and
---  jobs. A thin 'qb-core' resource sits alongside it purely so the
---  wider QBCore ecosystem (this server's uk_policejob, uk_uhsjob,
---  hazy_mdt, and any future off-the-shelf QBCore resource) keeps
---  working against exports['qb-core']:GetCoreObject() with zero
---  changes. Don't remove the qb-core resource — it's a compatibility
---  bridge, not a duplicate framework.
+--  Standalone core — the sole source of truth for player data, money
+--  and jobs. Every other HD resource in this server calls
+--  exports['HD_Framework']:GetCoreObject() directly; there is no
+--  qb-core (or any other framework-name) compatibility bridge, and
+--  none should be added — that's a deliberate choice, not an
+--  oversight. uk_policejob/uk_uhsjob are compiled/escrowed resources
+--  hardcoded to call exports['HD_Framework'], so they will NOT run against
+--  this framework (see README).
 -- ═══════════════════════════════════════════════════════════════════
 
 Config.ServerName = 'HD Framework'

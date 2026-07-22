@@ -9,7 +9,7 @@ Bridge = {}
 local QBCore, ESX
 
 if Config.Framework == 'qbcore' then
-    QBCore = exports['qb-core']:GetCoreObject()
+    QBCore = exports['HD_Framework']:GetCoreObject()
 elseif Config.Framework == 'esx' then
     ESX = exports['es_extended']:getSharedObject()
 else

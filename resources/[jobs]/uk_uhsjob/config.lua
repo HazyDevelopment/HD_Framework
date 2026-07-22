@@ -31,8 +31,8 @@ Config.ShortName      = "UHS"
 -- Each rank's Loadout is what the armoury will let that rank draw.
 -- This is a medical service — no weapons, just equipment. `items`
 -- entries are { name = "item_name", count = number } and must already
--- exist as valid items in your inventory system (qb-core/shared/
--- items.lua, ESX items table, ox_inventory items, etc) — this
+-- exist as valid items in your inventory system (HD_Framework's
+-- shared/items.lua, ESX items table, ox_inventory items, etc) — this
 -- resource just calls the standard AddItem-style function, it doesn't
 -- create item definitions.
 -- ===================================================================

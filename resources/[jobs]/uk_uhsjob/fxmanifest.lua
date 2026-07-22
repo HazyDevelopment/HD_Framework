@@ -9,11 +9,12 @@ version '2.0.0'
 shared_scripts {
     'config.lua',
 
-    -- QBCore locale (ACTIVE — matches Config.Framework = "qbcore" in config.lua)
-    '@qb-core/shared/locale.lua',
+    -- Locale shim (ACTIVE — matches Config.Framework = "qbcore" in
+    -- config.lua). Self-contained now — no external qb-core resource.
+    'shared/locale.lua',
 
-    -- ESX locale — uncomment this AND comment out the qb-core line
-    -- above if you set Config.Framework = "esx" in config.lua.
+    -- ESX locale — uncomment this AND comment out the line above if
+    -- you set Config.Framework = "esx" in config.lua.
     -- '@es_extended/locale.lua',
 }
 
@@ -60,9 +61,12 @@ escrow_ignore {
 -- Config.GPS.UseWasabiGPS is true.
 -- ===================================================================
 
--- QBCore (ACTIVE by default — Config.Framework = "qbcore")
+-- QBCore-shaped API (ACTIVE by default — Config.Framework = "qbcore").
+-- HD_Framework's core object matches QBCore's Functions/PlayerData
+-- shape, so the 'qbcore' branches throughout this resource work
+-- against it directly — no bridge resource needed.
 dependencies {
-    'qb-core',
+    'HD_Framework',
     'oxmysql'
 }
 

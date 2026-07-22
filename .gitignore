@@ -13,3 +13,16 @@ cache/
 # section (oxmysql, pma-voice). Fetch your own copy from upstream.
 resources/\[hd\]/oxmysql/
 resources/\[voice\]/pma-voice/
+
+# FXServer/txAdmin's own default base-resource pack (mapmanager,
+# baseevents, chat, spawnmanager, sessionmanager, basic-gamemode,
+# hardcap, plus a few unused example resources) — comes bundled with
+# any FXServer/txAdmin setup, not something this project provides or
+# owns. Kept locally so server.cfg's base `ensure` lines actually
+# resolve, never committed.
+resources/\[gamemodes\]/
+resources/\[gameplay\]/
+resources/\[local\]/
+resources/\[managers\]/
+resources/\[system\]/
+resources/\[test\]/

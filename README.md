@@ -1,10 +1,13 @@
 # HD Framework — United Kingdom Roleplay Server
 
-Custom QBCore-derived framework, fully UK-rebranded. The framework
-core, job/rank data, dispatch, the phone, the custom inventory,
-dedicated civilian job gameplay, real voice/radio via pma-voice,
-vehicle locking, and a full society-funds/fines economy are all built
-and wired together. See "Where to go from here" at the bottom for
+Custom framework, QBCore-derived in spirit (Functions/PlayerData API
+shape) but genuinely standalone — no qb-core or any other
+framework-name resource runs on this server, everything talks to
+`HD_Framework` directly. Fully UK-rebranded. The framework core,
+job/rank data, dispatch, the phone, the custom inventory, dedicated
+civilian job gameplay, real voice/radio via pma-voice, vehicle
+locking, and a full society-funds/fines economy are all built and
+wired together. See "Where to go from here" at the bottom for
 genuinely open extension points — this isn't "finished forever," but
 every system that was planned is in and working.
 
@@ -14,13 +17,12 @@ every system that was planned is in and working.
 resources/
   [hd]/
     HD_Framework/   ← the real core: player data, money, jobs, saving
-    qb-core/        ← compatibility bridge (see below) — do not delete
     hd_admin/       ← staff admin panel, /admin, gated on hd.admin
     HD_vehiclekeys/ ← vehicle locking + shared keys, reads player_vehicles directly
     hd_society/     ← business funds — police/ambulance/cardealer wages draw from these
     hd_fines/       ← police fines / UHS treatment invoices — feeds hd_society
   [jobs]/
-    uk_policejob/   ← United Kingdom Police job script (armoury, garage, evidence, GPS)
+    uk_policejob/   ← UK Police job script — escrow-encrypted, does NOT run here (see below)
     uk_uhsjob/      ← United Kingdom Health Service job script (armoury, garage, GPS, revive)
   [mdt]/
     hazy_mdt/       ← the MDT you already had, plus one small addition (see Fines below)
@@ -49,25 +51,40 @@ sql/
 server.cfg           ← example, fill in license key + MySQL string
 ```
 
-## Why there's a `qb-core` resource if this isn't QBCore
+## Standalone — no qb-core bridge
 
-`HD_Framework` is the real core — all player data, money and jobs live
-there. But `uk_policejob`, `uk_uhsjob` and `hazy_mdt` (and any
-off-the-shelf QBCore resource you add later — shops, garages, whatever)
-all talk to the framework via `exports['qb-core']:GetCoreObject()`,
-because that's the universal QBCore convention. Renaming that call in
-every resource you'll ever install isn't realistic, so instead
-`resources/[hd]/qb-core` is a **thin bridge**, not a second framework —
-every function call forwards straight through to `HD_Framework`. It
-holds no data of its own. This is the same pattern projects like QBox
-use for `qbx_core` → `qb-core` compatibility.
+`HD_Framework` is a genuinely standalone core, not a QBCore-compatible
+shim sitting on top of anything. Every HD resource in this server
+calls `exports['HD_Framework']:GetCoreObject()` directly, and there is
+deliberately no resource named `qb-core` running here — an earlier
+version of this server carried a thin `qb-core` compatibility bridge
+purely so off-the-shelf QBCore-ecosystem resources would work
+unmodified; that bridge has been removed on purpose, and none of HD's
+own resources depend on a `qb-core`-named resource existing at all.
 
-One consequence: `uk_policejob` and `uk_uhsjob` are **compiled/escrowed**
-resources (bought, not hand-written), and both hard-require
-`@qb-core/shared/locale.lua` as a file include. `qb-core/shared/locale.lua`
-is a minimal, never-throws translation shim so they start — untranslated
-strings just show their raw key rather than crashing the resource. Drop
-a fuller `Locales['en']` table in there if you want prettier strings.
+**What this means for the two purchased job resources:**
+- **`uk_uhsjob`** is plain, hand-editable Lua (not escrowed, despite
+  earlier documentation in this repo claiming otherwise — verified by
+  reading its raw file bytes). Its `Config.Framework == 'qbcore'`
+  branches are really just "use the QBCore-shaped Functions/PlayerData
+  API," which `HD_Framework`'s core object satisfies directly — no
+  bridge needed. Its `fxmanifest.lua` now depends on `HD_Framework`
+  instead of `qb-core`, and the `@qb-core/shared/locale.lua` file
+  include it used to pull from the (now-deleted) bridge resource has
+  been inlined as its own `shared/locale.lua`. It starts and runs
+  standalone.
+- **`uk_policejob`** is genuinely escrow-encrypted (confirmed via a
+  live boot test — its scripts begin with the real `FXAP` CitizenFX
+  escrow signature, and FXServer fails to parse them without the
+  entitlement that purchased/escrowed them). Its compiled code calls
+  `exports['qb-core']` directly; that can't be edited or worked around
+  from here. **It will not run on this server** and its `ensure` line
+  is commented out in `server.cfg`/`server.cfg.example` rather than
+  deleted. The only real fixes are getting a non-escrowed build of it,
+  replacing it with a hand-written UK police job (the same shape as
+  `uk_uhsjob`), or re-adding a `qb-core`-named resource solely so its
+  hardcoded export call resolves (which reintroduces the exact
+  dependency this round of work was about removing).
 
 ## Install
 
@@ -486,9 +503,11 @@ command syntax.
     and Discord webhook all fire exactly the same way regardless of
     which one triggered it). Correction to something I said in an
     earlier round: I'd described `hazy_mdt` as escrowed like
-    `uk_policejob`/`uk_uhsjob` — that was wrong, `hazy_mdt` is plain,
-    editable Lua (only those two job resources are actually compiled),
-    which is exactly what made this addition possible. It shows up in
+    `uk_policejob`/`uk_uhsjob` — that was wrong twice over. `hazy_mdt`
+    is plain, editable Lua, which is exactly what made this addition
+    possible. And a later live boot test showed `uk_uhsjob` is plain
+    Lua too — only `uk_policejob` is actually escrow-encrypted (see
+    "Standalone — no qb-core bridge" near the top). It shows up in
     `/mdt`'s civilian search immediately, and survives independently
     of whether any officer ever saw the live `hd_dispatch` call.
 
@@ -642,10 +661,11 @@ too — no `hd_mechanic` code needs touching.
 - **No automatic enforcement.** An expired MOT/insurance is visible —
   to the owner via `/vehiclestatus`, to a mechanic via `/diagnose`, to
   police via the MDT — but nothing fines or flags it automatically.
-  `uk_policejob` is compiled/escrowed (see "Why there's a qb-core
-  resource" above), so there's no way to hook an ANPR-style automatic
-  check into its scanner from here; a live plate check still has to go
-  through the MDT search by hand.
+  `uk_policejob` is escrow-encrypted (see "Standalone — no qb-core
+  bridge" above, and it doesn't even run on this server currently), so
+  there's no way to hook an ANPR-style automatic check into its
+  scanner from here; a live plate check still has to go through the
+  MDT search by hand.
 
 ## Where to go from here
 

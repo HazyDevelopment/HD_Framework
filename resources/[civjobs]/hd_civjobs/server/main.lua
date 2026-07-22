@@ -8,8 +8,8 @@
 
 local Framework = nil
 CreateThread(function()
-    while GetResourceState('qb-core') ~= 'started' do Wait(100) end
-    Framework = exports['qb-core']:GetCoreObject()
+    while GetResourceState('HD_Framework') ~= 'started' do Wait(100) end
+    Framework = exports['HD_Framework']:GetCoreObject()
 end)
 
 local ActiveContracts = {} -- [src] = { job, stops, stopIndex, visited = {[pointIndex]=true}, payMin, payMax }

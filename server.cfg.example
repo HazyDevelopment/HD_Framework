@@ -41,9 +41,8 @@ setr voice_enableRadioAnim 1
 setr voice_disableVehicleRadioAnim 1
 ensure pma-voice
 
-# ── HD_Framework core + QBCore-ecosystem compatibility bridge ──────
+# ── HD_Framework core — standalone, no qb-core bridge ────────────────
 ensure HD_Framework
-ensure qb-core
 
 # ── Staff admin panel (/admin) — gated on hd.admin, same ACE as above ─
 ensure hd_admin
@@ -58,7 +57,10 @@ ensure hd_society
 ensure hd_fines
 
 # ── Emergency service jobs ──────────────────────────────────────────
-ensure uk_policejob
+# uk_policejob is genuinely escrow-encrypted and hardcoded to call
+# exports['qb-core'], which this server no longer provides — it will
+# fail to load if ensured. Left commented, not deleted. See README.
+# ensure uk_policejob
 ensure uk_uhsjob
 
 # ── MDT (linked to police + UHS via config.lua Config.Departments) ──

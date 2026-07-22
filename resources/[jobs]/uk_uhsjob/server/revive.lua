@@ -12,7 +12,7 @@ if not Config.Revive or not Config.Revive.Enabled then return end
 
 local QBCore, ESX
 if Config.Framework == 'qbcore' then
-    QBCore = exports['qb-core']:GetCoreObject()
+    QBCore = exports['HD_Framework']:GetCoreObject()
 elseif Config.Framework == 'esx' then
     ESX = exports['es_extended']:getSharedObject()
 end

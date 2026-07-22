@@ -7,7 +7,7 @@
 -- ═══════════════════════════════════════════════════════════════════
 
 CreateThread(function()
-    while GetResourceState('qb-core') ~= 'started' do Wait(100) end
+    while GetResourceState('HD_Framework') ~= 'started' do Wait(100) end
 end)
 
 local CurrentContract = nil

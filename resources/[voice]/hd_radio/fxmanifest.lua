@@ -33,11 +33,10 @@ escrow_ignore {
 }
 
 -- pma-voice is a HARD dependency for this resource specifically — a
--- radio with no voice plugin behind it does nothing. HD_Framework and
--- qb-core are also required for the item-possession check (via
--- hd_inventory through the qb-core bridge chain).
+-- radio with no voice plugin behind it does nothing. HD_Framework is
+-- also required for the item-possession check (via hd_inventory,
+-- called directly, no bridge in between).
 dependencies {
     'pma-voice',
-    'qb-core',
     'HD_Framework'
 }

@@ -36,6 +36,5 @@ escrow_ignore {
 }
 
 dependencies {
-    'qb-core',
     'HD_Framework'
 }

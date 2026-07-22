@@ -9,9 +9,9 @@ local CurrentDept = nil
 
 -- ─────────────────────────── Framework ────────────────────────────
 CreateThread(function()
-    if Config.Framework == 'qb' or (Config.Framework == 'auto' and GetResourceState('qb-core') == 'started') then
-        FrameworkName = 'qb'
-        Framework = exports['qb-core']:GetCoreObject()
+    if Config.Framework == 'hd' or (Config.Framework == 'auto' and GetResourceState('HD_Framework') == 'started') then
+        FrameworkName = 'hd'
+        Framework = exports['HD_Framework']:GetCoreObject()
     elseif Config.Framework == 'esx' or (Config.Framework == 'auto' and GetResourceState('es_extended') == 'started') then
         FrameworkName = 'esx'
         Framework = exports['es_extended']:getSharedObject()
@@ -20,7 +20,7 @@ CreateThread(function()
 end)
 
 function RefreshJob()
-    if FrameworkName == 'qb' then
+    if FrameworkName == 'hd' then
         local pd = Framework.Functions.GetPlayerData()
         if pd and pd.job then
             PlayerJob.name = pd.job.name

@@ -6,7 +6,7 @@ Config = {}
 --  from the real-world apps they're inspired by so this stays clear
 --  of any trademark — original names/UI, not reproductions), and
 --  Garages. Talks to the framework the same way every other resource
---  in this ecosystem does — exports['qb-core']:GetCoreObject().
+--  in this ecosystem does — exports['HD_Framework']:GetCoreObject().
 -- ═══════════════════════════════════════════════════════════════════
 
 -- ═══════════════════════════ ITEM / OPEN ════════════════════════════
