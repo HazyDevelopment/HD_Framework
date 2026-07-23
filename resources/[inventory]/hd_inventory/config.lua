@@ -22,6 +22,8 @@ Config.HotbarSlots = 5     -- slots 1-5 of the main grid double as the hotbar; k
 Config.StarterItems = {
     { name = 'phone', amount = 1 },
     { name = 'id_card', amount = 1 },
+    { name = 'water_bottle', amount = 15 },
+    { name = 'sandwich', amount = 15 },
 }
 
 -- ═══════════════════════════ VEHICLE STORAGE ════════════════════════
@@ -66,14 +68,64 @@ Config.StashDefaults = { slots = 30, weight = 30000 }
 -- ═══════════════════════════ GROUND DROPS ════════════════════════════
 -- Persisted in `hd_inventory_drops` — a drop survives a restart and is
 -- reloaded into memory (server/drops.lua) the moment the server comes
--- back up. Renders as a real world prop now too (client/drops.lua) —
--- one generic model for every drop rather than one accurate prop per
--- item, same trade-off ox_inventory itself makes with its own default.
+-- back up. Renders as a real world prop (client/drops.lua).
 Config.DropRadius = 2.0
-Config.DropProp = 'prop_med_bag_01b'
+Config.DropProp = 'prop_med_bag_01b' -- final fallback when nothing below matches
+
+-- Per-item ground-drop props — every drop used to render as this same
+-- generic Config.DropProp regardless of contents (see top-level
+-- README's "Where to go from here"). server/drops.lua's
+-- ResolveDropProp(data) picks a drop's first item and checks, in
+-- order: that item's own shared/items.lua `model` field (explicit,
+-- rare) → byName below → byType below (keyed on the item's `type`,
+-- e.g. every weapon-type item at once) → Config.DropProp. A drop that
+-- gains a second, different item afterward keeps the prop it was
+-- created with — same "pick a tie-break rule, don't chase every
+-- possible mixed pile" trade-off as the single generic model before
+-- it. Add to either table freely; anything unmatched still falls back
+-- to Config.DropProp exactly like before, nothing breaks.
+Config.ItemDropProps = {
+    byType = {
+        weapon = 'prop_box_ammo04a',
+    },
+    byName = {
+        -- cash / valuables
+        moneybag = 'prop_cash_pile_01', goldbar = 'prop_cash_pile_01', goldchain = 'prop_cash_pile_01',
+        ['10kgoldchain'] = 'prop_cash_pile_01', diamond_ring = 'prop_cash_pile_01', rolex = 'prop_cash_pile_01',
+        casinochips = 'prop_cash_pile_01', markedbills = 'prop_cash_pile_01',
+
+        -- phones / computers
+        phone = 'prop_laptop_02b', iphone = 'prop_laptop_02b', samsungphone = 'prop_laptop_02b',
+        laptop = 'prop_laptop_02b', tablet = 'prop_laptop_02b',
+
+        -- documents / cards
+        id_card = 'prop_cs_letter', driver_license = 'prop_cs_letter', bank_card = 'prop_cs_letter',
+        weapon_license = 'prop_cs_letter', security_card_01 = 'prop_cs_letter', security_card_02 = 'prop_cs_letter',
+        certificate = 'prop_cs_letter', lawyerpass = 'prop_cs_letter',
+
+        -- tools / repair kits
+        repairkit = 'prop_tool_box_04', repairkit_advanced = 'prop_tool_box_04', jump_cables = 'prop_tool_box_04',
+        drill = 'prop_tool_box_04', cleaningkit = 'prop_tool_box_04', screwdriverset = 'prop_tool_box_04',
+        advancedkit = 'prop_tool_box_04', electronickit = 'prop_tool_box_04', tirerepairkit = 'prop_tool_box_04',
+
+        -- ammo (issued separately from the weapon-type items above)
+        mg_ammo = 'prop_box_ammo04a', pistol_ammo = 'prop_box_ammo04a', rifle_ammo = 'prop_box_ammo04a',
+        shotgun_ammo = 'prop_box_ammo04a', smg_ammo = 'prop_box_ammo04a',
+
+        -- baggable contraband
+        weed_baggy = 'prop_paper_bag_01', cocaine_baggy = 'prop_paper_bag_01', meth_baggy = 'prop_paper_bag_01',
+        crack_baggy = 'prop_paper_bag_01', xtc_baggy = 'prop_paper_bag_01', oxy = 'prop_paper_bag_01',
+
+        -- medical (matches Config.DropProp's own model, now explicit rather than an accidental global default)
+        medkit = 'prop_med_bag_01b', bandage = 'prop_med_bag_01b', defibrillator = 'prop_med_bag_01b',
+        trauma_kit = 'prop_med_bag_01b', splint = 'prop_med_bag_01b', morphine = 'prop_med_bag_01b',
+        surgical_kit = 'prop_med_bag_01b', firstaid = 'prop_med_bag_01b', ifaks = 'prop_med_bag_01b',
+    },
+}
 
 -- ═══════════════════════════ KEYBINDS ════════════════════════════════
 Config.Keybind = 'TAB' -- opens the player's own inventory
+Config.HotbarToggleKey = 'Z' -- hold to show the hotbar HUD; hidden by default, hides again on release
 
 -- ═══════════════════════════ NOTIFY ══════════════════════════════════
 Config.Notify = function(msg, ntype)

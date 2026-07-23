@@ -71,7 +71,7 @@ local function ChargeOwner(src, plate, shop, price, reason)
     end
 
     if GetResourceState('hd_society') == 'started' then
-        exports['hd_society']:AddFunds('mechanic', price)
+        exports['hd_society']:AddFunds('mechanic', price, reason, OwnerPlayer.PlayerData.citizenid)
     end
     Notify(ownerSrc, ('Charged £%d — %s.'):format(price, reason), 'info')
     return true

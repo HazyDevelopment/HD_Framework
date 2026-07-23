@@ -33,7 +33,8 @@ CreateThread(function()
 end)
 
 -- ═══════════════════════════ IDENTIFIER HELPERS ═════════════════════
-local function GetLicense(src)
+-- Global (not local) — server/characters.lua needs both too.
+function GetLicense(src)
     for i = 0, GetNumPlayerIdentifiers(src) - 1 do
         local id = GetPlayerIdentifier(src, i)
         if id and id:match('^license:') then return id end
@@ -41,7 +42,7 @@ local function GetLicense(src)
     return nil
 end
 
-local function GenerateCitizenId()
+function GenerateCitizenId()
     local chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' -- no 0/O/1/I ambiguity
     local id
     repeat
@@ -56,67 +57,28 @@ local function GenerateCitizenId()
     return id
 end
 
-local function DefaultCharinfo(src)
-    local full = GetPlayerName(src) or 'New Citizen'
-    local first, last = full:match('^(%S+)%s+(.*)$')
-    if not first then first, last = full, 'Citizen' end
+-- Turns a `players` row into the same in-memory shape CreatePlayerObject
+-- expects — used by server/characters.lua on both select and create.
+function RowToPlayerData(row, license)
     return {
-        firstname = first,
-        lastname = last ~= '' and last or 'Citizen',
-        birthdate = '01/01/2000',
-        gender = 'Not specified',
-        nationality = Config.DefaultCharinfo.nationality,
-        phone = '07' .. tostring(math.random(100000000, 999999999)),
+        citizenid = row.citizenid,
+        license = license,
+        charinfo = json.decode(row.charinfo or '{}'),
+        job = json.decode(row.job or '{}'),
+        money = json.decode(row.money or '{}'),
+        metadata = json.decode(row.metadata or '{}'),
+        position = json.decode(row.position or 'null'),
     }
 end
 
--- ═══════════════════════════ LOAD / CREATE ═══════════════════════════
--- Deliberately single-character-per-license for v1 — multi-character
--- selection is a natural extension point for the phone/UI build
--- phase; hook it in here by branching on a client-picked slot instead
--- of always loading row 1.
-local function LoadOrCreatePlayer(src, license)
-    local row = MySQL.single.await('SELECT * FROM players WHERE license = ?', { license })
-
-    if row then
-        return {
-            citizenid = row.citizenid,
-            license = license,
-            charinfo = json.decode(row.charinfo or '{}'),
-            job = json.decode(row.job or '{}'),
-            money = json.decode(row.money or '{}'),
-            metadata = json.decode(row.metadata or '{}'),
-            position = json.decode(row.position or 'null'),
-        }
-    end
-
-    -- New citizen: create the row now so citizenid is stable from tick one.
-    local citizenid = GenerateCitizenId()
-    local charinfo = DefaultCharinfo(src)
-    local job = {
-        name = 'unemployed',
-        label = Jobs['unemployed'].label,
-        onduty = Jobs['unemployed'].defaultDuty,
-        grade = { level = 0, name = Jobs['unemployed'].grades[0].name },
-        isboss = false,
-        type = Jobs['unemployed'].type,
-    }
-    local money = { cash = Config.StartingCash, bank = Config.StartingBank }
-    local metadata = { licences = { driver = false } }
-    local position = { x = Config.DefaultSpawn.x, y = Config.DefaultSpawn.y, z = Config.DefaultSpawn.z, w = Config.DefaultSpawn.w }
-
-    MySQL.insert.await(
-        'INSERT INTO players (citizenid, license, name, charinfo, job, money, metadata, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        {
-            citizenid, license, charinfo.firstname .. ' ' .. charinfo.lastname,
-            json.encode(charinfo), json.encode(job), json.encode(money),
-            json.encode(metadata), json.encode(position),
-        }
-    )
-
-    print(('^2[HD_Framework]^7 New citizen created: %s (%s)'):format(citizenid, charinfo.firstname .. ' ' .. charinfo.lastname))
-
-    return { citizenid = citizenid, license = license, charinfo = charinfo, job = job, money = money, metadata = metadata, position = position }
+-- Shared tail end of both selectCharacter and createCharacter — builds
+-- the live Player object and tells the client it can finally spawn in.
+function FinishLoadingPlayer(src, data)
+    local Player = HD.Functions.CreatePlayerObject(src, data)
+    HD.Players[src] = Player
+    TriggerClientEvent('hd:client:onPlayerLoaded', src, Player.PlayerData)
+    TriggerEvent('HD:Server:PlayerLoaded', Player)
+    if Config.Debug then print(('^3[HD_Framework]^7 Loaded %s (%s)'):format(Player.PlayerData.citizenid, src)) end
 end
 
 -- ═══════════════════════════ CONNECT / DROP ══════════════════════════
@@ -133,8 +95,11 @@ AddEventHandler('playerConnecting', function(name, setKickReason, deferrals)
 end)
 
 -- Fired by client/main.lua once the client has finished its own
--- bootstrap and is ready to receive PlayerData (mirrors QBCore's
--- "player ready" handshake).
+-- bootstrap and is ready to receive data (mirrors QBCore's "player
+-- ready" handshake). No character is loaded yet — this only sends the
+-- character list so the client can show character select. Actually
+-- loading a Player object happens in server/characters.lua, once the
+-- player has picked or created one.
 RegisterNetEvent('hd:server:playerReady', function()
     local src = source
     if HD.Players[src] then return end -- already loaded, ignore dupes
@@ -145,13 +110,7 @@ RegisterNetEvent('hd:server:playerReady', function()
         return
     end
 
-    local data = LoadOrCreatePlayer(src, license)
-    local Player = HD.Functions.CreatePlayerObject(src, data)
-    HD.Players[src] = Player
-
-    TriggerClientEvent('hd:client:onPlayerLoaded', src, Player.PlayerData)
-    TriggerEvent('HD:Server:PlayerLoaded', Player)
-    if Config.Debug then print(('^3[HD_Framework]^7 Loaded %s (%s)'):format(Player.PlayerData.citizenid, src)) end
+    SendCharacterList(src, license)
 end)
 
 AddEventHandler('playerDropped', function(reason)

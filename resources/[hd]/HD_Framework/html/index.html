@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>HD Framework</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="root" class="hidden">
+
+    <!-- CHARACTER SELECT -->
+    <section id="screen-select" class="screen">
+        <h1 class="title">Select a Character</h1>
+        <div class="slot-grid" id="slotGrid"></div>
+    </section>
+
+    <!-- CHARACTER CREATE -->
+    <section id="screen-create" class="screen hidden">
+        <h1 class="title">New Character</h1>
+        <div class="create-layout">
+
+            <div class="create-col">
+                <label class="field-label">First Name</label>
+                <input type="text" class="field-input" id="cFirstName" maxlength="30">
+
+                <label class="field-label">Last Name</label>
+                <input type="text" class="field-input" id="cLastName" maxlength="30">
+
+                <label class="field-label">Gender</label>
+                <select class="field-input" id="cGender">
+                    <option>Male</option>
+                    <option>Female</option>
+                    <option>Not specified</option>
+                </select>
+
+                <label class="field-label">Date of Birth</label>
+                <div class="dob-selects">
+                    <select class="field-input" id="cDobYear"></select>
+                    <select class="field-input" id="cDobMonth"></select>
+                </div>
+                <div class="calendar" id="calendarGrid"></div>
+
+                <label class="field-label">Home Address</label>
+                <div class="flat-grid" id="flatGrid"></div>
+            </div>
+
+        </div>
+        <div class="form-error hidden" id="createError"></div>
+        <div class="create-actions">
+            <button class="wide-btn" id="createBackBtn">Back</button>
+            <button class="wide-btn primary" id="createSubmitBtn">Create Character</button>
+        </div>
+    </section>
+
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>

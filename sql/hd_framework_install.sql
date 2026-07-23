@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS `players` (
     `position`      LONGTEXT     NULL DEFAULT NULL,
     `last_updated`  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`citizenid`),
-    UNIQUE KEY `license_unique` (`license`)
+    KEY `license_idx` (`license`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `player_vehicles` (
@@ -53,3 +53,15 @@ CREATE TABLE IF NOT EXISTS `ukp_fingerprints` (
     `fingerprint`   VARCHAR(20) NOT NULL,
     PRIMARY KEY (`identifier`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ═══════════════════════════════════════════════════════════════════
+--  v1.1.0 — MULTICHARACTER MIGRATION
+--  `license` was UNIQUE (one character per account) — dropping that is
+--  what actually enables multiple citizenid rows per license. Back up
+--  your database before running this on an existing install.
+-- ═══════════════════════════════════════════════════════════════════
+-- IF EXISTS on the drop makes this safe to run against a fresh install
+-- too, where the CREATE TABLE above never created license_unique in
+-- the first place.
+ALTER TABLE `players` DROP INDEX IF EXISTS `license_unique`;
+ALTER TABLE `players` ADD INDEX IF NOT EXISTS `license_idx` (`license`);

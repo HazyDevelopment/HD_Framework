@@ -44,6 +44,9 @@ ensure pma-voice
 # ── HD_Framework core — standalone, no qb-core bridge ────────────────
 ensure HD_Framework
 
+# ── Property ownership: starter flats + the real estate job ─────────
+ensure hd_housing
+
 # ── Staff admin panel (/admin) — gated on hd.admin, same ACE as above ─
 ensure hd_admin
 
@@ -62,6 +65,15 @@ ensure hd_fines
 # fail to load if ensured. Left commented, not deleted. See README.
 # ensure uk_policejob
 ensure uk_uhsjob
+
+# hd_policejob — hand-written replacement for uk_policejob above, built
+# natively against HD_Framework (see resources/[jobs]/hd_policejob/README.md).
+ensure hd_policejob
+
+# hd_ems — ambulance's "built-in death script": downed/bleed-out state
+# and real EMS revive instead of basic-gamemode's instant auto-respawn.
+# Must load after basic-gamemode (see resources/[jobs]/hd_ems/README.md).
+ensure hd_ems
 
 # ── MDT (linked to police + UHS via config.lua Config.Departments) ──
 ensure hazy_mdt

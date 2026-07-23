@@ -24,16 +24,16 @@ Config.StartingBank = 2500
 Config.DefaultSpawn = vector4(-269.4, -955.3, 31.2, 205.8) -- Legion Square, London-reskinned Los Santos
 
 -- ═══════════════════════════ CHARACTER DEFAULTS ════════════════════
--- HD_Framework auto-creates a single character per license on first
--- join (multi-character selection is a natural extension point for
--- the phone/UI phase — see server/main.lua CreatePlayer). These are
--- the placeholder details that character starts with; players are
--- expected to update them via a future "ID card" phone app or
--- /setcharinfo (see server/commands.lua).
 Config.DefaultCharinfo = {
     nationality = 'British',
     phone = nil, -- generated per-player, see server/main.lua GeneratePhoneNumber
 }
+
+-- ═══════════════════════════ MULTICHARACTER ═════════════════════════
+-- One license can own up to this many citizenid rows in `players`.
+-- Enforced server-side in server/characters.lua — never trust the
+-- client's own count.
+Config.MaxCharacterSlots = 5
 
 -- ═══════════════════════════ UK BENEFITS (UNIVERSAL CREDIT) ════════
 -- Anyone still on the 'unemployed' job is paid a small standing-order
@@ -43,8 +43,8 @@ Config.DefaultCharinfo = {
 Config.Benefits = {
     Enabled = true,
     Job = 'unemployed',
-    Amount = 85,          -- paid to bank
-    IntervalMinutes = 45,
+    Amount = 120,          -- paid to bank
+    IntervalMinutes = 15,
     NotifyMessage = 'Universal Credit payment received: £%s'
 }
 
@@ -79,7 +79,7 @@ Config.Salary = {
 
 -- ═══════════════════════════ SAVE / PERFORMANCE ════════════════════
 Config.AutoSaveIntervalMinutes = 5
-Config.CitizenIdPrefix = '' -- e.g. 'HD' to make ids look like HD4F82A1 instead of 4F82A1
+Config.CitizenIdPrefix = 'HD' -- e.g. 'HD' to make ids look like HD4F82A1 instead of 4F82A1
 
 -- ═══════════════════════════ MONEY ACCOUNTS ════════════════════════
 -- UK-flavoured account names. 'cash' and 'bank' are the two accounts

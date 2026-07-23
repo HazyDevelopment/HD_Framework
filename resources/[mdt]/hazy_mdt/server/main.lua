@@ -483,6 +483,45 @@ exports('IssueSystemWarrant', function(citizenid, name, reason, issuedBy)
     return true
 end)
 
+-- For other resources: read a citizen's active warrants with no
+-- officer session involved — used by hd_policejob's /detain to verify
+-- there's actually something to arrest on before it acts.
+exports('GetActiveWarrants', function(citizenid)
+    local dept = Config.Departments.police
+    if not dept then return {} end
+    return MySQL.query.await(
+        'SELECT id, reason, issued_by, created FROM `' .. dept.Prefix .. '_warrants` WHERE citizenid = ? AND active = 1',
+        { tostring(citizenid) }) or {}
+end)
+
+-- For other resources: resolve every active warrant for a citizen at
+-- once (a /detain arrest clears all of them, not one at a time like
+-- the Command-tab NUI's per-id Handlers.clearWarrant does). Returns
+-- false if there was nothing active to clear. Same webhook shape as
+-- Handlers.clearWarrant below, just sourced from an arrest instead of
+-- an officer clicking "Clear" in the MDT.
+exports('ClearWarrantsForCitizen', function(citizenid, clearedBy)
+    local dept = Config.Departments.police
+    if not dept then return false end
+    local rows = MySQL.query.await(
+        'SELECT name FROM `' .. dept.Prefix .. '_warrants` WHERE citizenid = ? AND active = 1',
+        { tostring(citizenid) }) or {}
+    if #rows == 0 then return false end
+
+    MySQL.query.await('UPDATE `' .. dept.Prefix .. '_warrants` SET active = 0 WHERE citizenid = ? AND active = 1', { tostring(citizenid) })
+
+    local hook = WebhookFor('police', 'warrants')
+    if hook ~= '' then
+        SendWebhook(hook, {
+            title = '🚔 Warrant Cleared — Detained',
+            description = ('**%s** was detained on an outstanding warrant by **%s**.'):format(rows[1].name, clearedBy or 'Unknown'),
+            color = Config.WebhookColors.dutyOn,
+            timestamp = os.date('!%Y-%m-%dT%H:%M:%SZ')
+        })
+    end
+    return true
+end)
+
 Handlers.clearWarrant = function(src, char, deptKey, dept, data)
     if deptKey ~= 'police' then return { ok = false, error = 'Police only.' } end
     if not IsBoss(char, dept) then return { ok = false, error = 'Command access only.' } end

@@ -29,8 +29,13 @@ server_scripts {
 -- and civilian search already use — without needing a live officer
 -- session. See server/main.lua's IssueWarrantRecord for the shared
 -- logic this and Handlers.setWarrant both call.
+-- GetActiveWarrants / ClearWarrantsForCitizen: same idea, consumed by
+-- hd_policejob's /detain — the actual enforcement mechanic behind an
+-- auto-warrant, not just the notification it used to be alone.
 server_exports {
-    'IssueSystemWarrant'
+    'IssueSystemWarrant',
+    'GetActiveWarrants',
+    'ClearWarrantsForCitizen'
 }
 
 files {

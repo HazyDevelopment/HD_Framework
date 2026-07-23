@@ -31,7 +31,8 @@ files {
     'html/index.html',
     'html/css/style.css',
     'html/js/icons.js',
-    'html/js/app.js'
+    'html/js/app.js',
+    'html/images/*.png'
 }
 
 exports {

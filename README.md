@@ -22,8 +22,11 @@ resources/
     hd_society/     ← business funds — police/ambulance/cardealer wages draw from these
     hd_fines/       ← police fines / UHS treatment invoices — feeds hd_society
   [jobs]/
-    uk_policejob/   ← UK Police job script — escrow-encrypted, does NOT run here (see below)
+    hd_policejob/   ← UK Police job, hand-written against HD_Framework (see below)
+    hd_ems/         ← death/revive — replaces vanilla death entirely (see below)
     uk_uhsjob/      ← United Kingdom Health Service job script (armoury, garage, GPS, revive)
+  [housing]/
+    hd_housing/     ← starter flats + the real estate job (see below)
   [mdt]/
     hazy_mdt/       ← the MDT you already had, plus one small addition (see Fines below)
   [dispatch]/
@@ -31,7 +34,8 @@ resources/
   [inventory]/
     hd_inventory/   ← grid inventory: player, hotbar, stashes, glovebox/trunk, ground drops
   [phone]/
-    hd_phone/       ← Contacts, Messages, Calls, Wire/Picta/Loopz, Garages
+    hd_phone/       ← Contacts, Messages, Calls, Wire/Picta/Loopz, Garages,
+                       Bank, Mail, Marketplace, Notes, Crypto, Gallery, Settings
   [civjobs]/
     hd_civjobs/     ← shift/contract loop for taxi/HGV/postal/waste/bus/reporter/estate agent
     hd_cardealer/   ← vehicle showroom — buy with bank funds, drive off
@@ -48,6 +52,7 @@ sql/
   hd_fines_install.sql
   hd_admin_install.sql
   hd_mechanic_install.sql
+  hd_housing_install.sql
 server.cfg           ← example, fill in license key + MySQL string
 ```
 
@@ -80,11 +85,22 @@ own resources depend on a `qb-core`-named resource existing at all.
   `exports['qb-core']` directly; that can't be edited or worked around
   from here. **It will not run on this server** and its `ensure` line
   is commented out in `server.cfg`/`server.cfg.example` rather than
-  deleted. The only real fixes are getting a non-escrowed build of it,
-  replacing it with a hand-written UK police job (the same shape as
-  `uk_uhsjob`), or re-adding a `qb-core`-named resource solely so its
-  hardcoded export call resolves (which reintroduces the exact
-  dependency this round of work was about removing).
+  deleted.
+- **This gap is now filled by `hd_policejob`** (`resources/[jobs]/
+  hd_policejob/`) — a hand-written UK police job built natively
+  against `HD_Framework`, the "replacing it with a hand-written UK
+  police job (the same shape as `uk_uhsjob`)" option from the previous
+  paragraph. Same rank table as `uk_policejob` would have had (PCSO →
+  Commissioner, ARV tier 5–8 the only ranks issued firearms), a
+  rank-locked armoury (native weapons via `GiveWeaponToPed`, radio/
+  handcuffs/armour plate as real `hd_inventory` items), and GPS that
+  deliberately reuses `uk_uhsjob`'s existing blip-rendering client
+  script instead of duplicating it — see `hd_policejob/README.md` for
+  the full breakdown, including two small pre-existing bugs in
+  `uk_uhsjob` that surfaced and were fixed while building this
+  (`Bridge.GiveItem` calling a method that doesn't exist on
+  `HD_Framework`'s `Player` object, and a missing `trauma_kit` item
+  definition).
 
 ## Install
 
@@ -94,20 +110,23 @@ own resources depend on a `qb-core`-named resource existing at all.
    `sql/hd_inventory_install.sql` (it `ALTER TABLE`s the `players` row `hd_framework_install.sql`
    just created), then `sql/hd_phone_install.sql`, then `sql/hd_vehiclekeys_install.sql`, then
    `sql/hd_society_install.sql`, then `sql/hd_fines_install.sql`, then `sql/hd_admin_install.sql`,
-   then `sql/hd_mechanic_install.sql`.
+   then `sql/hd_mechanic_install.sql`, then `sql/hd_housing_install.sql`.
    If you installed
    `hd_inventory_install.sql` before v1.1.0 (it now also creates `hd_inventory_drops`, for
    ground-drop persistence), just re-import it — every statement in every one of these files is
-   `IF NOT EXISTS`, safe to run again.
+   `IF NOT EXISTS`, safe to run again. **`hd_framework_install.sql`'s own bottom section is the
+   multicharacter migration** (drops the old one-character-per-license unique constraint) — back
+   up your database before importing it against an existing install.
 3. Also import `resources/[mdt]/hazy_mdt/sql/install_qbcore.sql` (MDT's own tables) and
-   `resources/[jobs]/uk_policejob/install_qbcore.sql` + `resources/[jobs]/uk_uhsjob/install_qbcore.sql`
-   (fingerprint table is already included in `hd_framework_install.sql`, but check each job's own SQL file for anything extra).
+   `resources/[jobs]/uk_uhsjob/install_qbcore.sql` (`hd_policejob` and `hd_ems` need no SQL of
+   their own — fingerprint table is already included in `hd_framework_install.sql`, but check
+   `uk_uhsjob`'s own SQL file for anything extra).
 4. Copy `server.cfg.example` to `server.cfg` (the real `server.cfg` is gitignored on purpose — it
    ends up holding your actual license key and DB credentials, which should never get committed),
    fill in `sv_licenseKey` (free, from [Keymaster](https://keymaster.fivem.net)),
    `mysql_connection_string`, and your admin license under `add_principal`.
 5. Start the server. Console should print `Database verified. Ready.` from `HD_Framework`,
-   `hd_inventory`, `hd_phone`, `hd_admin`, and `hd_mechanic`.
+   `hd_inventory`, `hd_phone`, `hd_admin`, `hd_mechanic`, and `hd_housing`.
 
 ## Jobs & ranks (`resources/[hd]/HD_Framework/shared/jobs.lua`)
 
@@ -129,6 +148,54 @@ New characters start on `unemployed` and get a small "Universal Credit"
 payment to their bank every 45 minutes (`server/benefits.lua`) so no one
 starts at zero — this isn't a fake starter-cash hack, unemployed is a
 real, valid default UK job.
+
+## Multicharacter (`resources/[hd]/HD_Framework`)
+
+Up to `Config.MaxCharacterSlots` (default **5**) characters per license,
+each a separate `citizenid` row in `players` — the old build only ever
+allowed one. On connect, before anything spawns, the client is frozen,
+faded to black, and shown a character select screen (own NUI, no
+external assets) built from `HD_Framework/html/`:
+
+- **Select** — pick an existing character to play, or delete one (click
+  the ✕ twice to confirm — no native browser `confirm()` dialogs, which
+  don't render reliably in FiveM's NUI).
+- **Create** (shown when under the slot limit) — first name, last name,
+  gender, a real year/month + day-grid **calendar** for date of birth
+  (16+ enforced both client and server-side), and a **Home Address**
+  picker sourced live from `hd_housing`'s available starter flats.
+  Citizen ID is generated server-side once the character is actually
+  created, same as before.
+
+Every validation (name format, age, slot count, the actual character
+belonging to the connecting license) is re-checked in
+`server/characters.lua` — the NUI's own checks are just UX, not the
+real gate.
+
+## Housing (`resources/[housing]/hd_housing`)
+
+One `hd_properties` table backs both a free starter flat (claimed once,
+during character creation) and anything the real estate job registers
+later — same row shape, same enter/exit flow either way.
+
+- **Interiors aren't real GTA MLO/apartment assets** — building or
+  importing custom map interiors wasn't achievable here. Instead every
+  property gets its own private "pocket": a small, fully self-controlled
+  space high in the sky (guaranteed empty, can't collide with anything
+  else in the world) furnished with a handful of basic props
+  (`Config.PlainFurniture`). It's genuinely **plain**, not a decorated
+  apartment — a functional placeholder. If a prop looks off once you've
+  actually seen it in-game, that's a `config.lua` tweak away.
+- Walk up to your property's exterior door (`Config.InteractDistance`)
+  and press **E** to go in; **BACKSPACE** while inside to leave.
+- **Real estate job** (`Jobs['realestate']`, already in
+  `shared/jobs.lua`, plus its own shift/contract income loop in
+  `hd_civjobs`) gets the actual tool: `/realestate register [price]
+  [label]` turns wherever they're standing into a purchasable property
+  with the same plain interior; `/realestate sell [id] [server id]`
+  assigns an unowned one to a citizen. Gated on
+  `Config.RealEstate.AcePermission` (defaults to `hd.admin`) or the
+  `realestate` job.
 
 ## Admin commands
 
@@ -198,20 +265,54 @@ have opened in the first place.
   the client. A map blip drops for every call a responder is eligible
   to see; "Waypoint" sets nav straight to it.
 - **Automatic calls**: shots fired (nearby reports merge into one call
-  instead of spamming the board) and player-downed (currently hooked
-  to the vanilla `baseevents:onPlayerDied` event — if/when a proper
-  medical system replaces vanilla death, point its "player is now
-  down" moment at `TriggerServerEvent('hd_dispatch:server:playerDowned')`
-  instead, it'll be more accurate).
+  instead of spamming the board) and player-downed, both hooked to the
+  same `baseevents:onPlayerDied` moment `hd_ems` (below) reacts to —
+  the two resources just react independently, no coupling needed.
 - Calls aren't persisted to a database yet — closed calls just drop off
   the live board. Fine for v1; flag it if you want call history later.
 
+## Death & Revive (`resources/[jobs]/hd_ems`)
+
+Replaces vanilla death entirely — without this, `basic-gamemode` force-
+respawns anyone 2 seconds after death and EMS never gets a chance to
+matter. On death the ped is resurrected-in-place immediately (the
+standard ESX/QBCore "fake death" pattern — from the game's own point of
+view it's never actually fatally injured, so the native wasted screen/
+auto-respawn never fires), frozen exactly where it fell, and locked
+into a writhe animation with movement/combat controls disabled.
+
+There is **no timer and no self-service respawn** — a downed player
+stays exactly where they died until either:
+- an **on-duty ambulance** revives them in person (must be within
+  `Config.ReviveDistance`, carrying a `defibrillator`, hold **E** for
+  `Config.RequiredHoldMs`), or
+- staff run `uk_uhsjob`'s `/revive [id]`, which fires the same "clear
+  the downed state" hook `hd_ems` listens for.
+
+`setAutoSpawn(false)` is asserted immediately at script start and
+re-asserted for several seconds after (spawnmanager is a hard
+dependency, but `basic-gamemode` also flips it on inside its own
+`onClientMapStart` handler — re-asserting wins that race unconditionally
+regardless of which order the two actually fire in).
+
 ## Phone (`resources/[phone]/hd_phone`)
 
-**M** opens/closes it. Every app (Wire/Picta/Loopz below) is
-original-named with its own UI, not a reproduction of Twitter/
-Instagram/TikTok's branding — that's what keeps this clear of any
-trademark issue under FiveM's ToS.
+**M** opens/closes it. iPhone-inspired shell (notch, status bar,
+translucent nav bar, home indicator, rounded "squircle" app icons, a
+pinned dock) built from scratch — no LB Phone or other third-party
+code/assets, and every app (Wire/Picta/Loopz below) is original-named
+with its own UI, not a reproduction of Twitter/Instagram/TikTok's
+branding — both of those are what keeps this clear of any trademark
+issue under FiveM's ToS.
+
+**App Store** — Phone, Messages, Contacts, App Store and Settings are
+core apps: always on the home screen and in the dock, can't be
+removed (mirrors iOS system apps). Every other app below starts
+**uninstalled** — open the App Store and hit "Get" to add it to the
+home screen, or "Remove" to take it off. Installed state is per
+character (`hd_phone_installed_apps`), validated server-side against
+`Config.DownloadableApps` so a tampered NUI callback can't install an
+arbitrary id.
 
 - **Contacts** — save a name against a number, call or message straight
   from the list.
@@ -219,7 +320,22 @@ trademark issue under FiveM's ToS.
   a live call timer once connected, with **real two-way audio** via
   pma-voice (`exports['pma-voice']:setPlayerCall`, each call's own id
   doubles as its pma-voice call channel). Degrades to a silent-but-
-  functional call UI if pma-voice isn't running.
+  functional call UI if pma-voice isn't running. A synthesized UK
+  dual-ring cadence plays for incoming Phone and FaceTime calls alike
+  (Web Audio oscillators, no external sound asset).
+- **FaceTime** — real two-way video and audio, peer-to-peer over
+  WebRTC. `server/facetime.lua` is a pure signaling relay (SDP offer/
+  answer + ICE candidates) between the two players' own
+  `RTCPeerConnection`s — media itself never touches FXServer. Uses a
+  public STUN server for NAT traversal; there's no TURN fallback, so a
+  call between two very restrictive NATs could fail to connect even
+  though the ring/answer handshake succeeds. Needs the player to grant
+  FiveM camera/mic permission — if nothing appears, check Windows'
+  camera privacy settings allow FiveM.exe.
+- **AirDrop** — broadcasts your name and number to every other online
+  phone within `Config.Airdrop.Radius` meters; each nearby player gets
+  an accept/decline prompt, and accepting just runs the normal
+  Contacts save on their end.
 - **Messages** — SMS between phone numbers (`charinfo.phone`, generated
   once per character by `HD_Framework`), threaded, unread counts,
   delivered instantly if the recipient's online.
@@ -230,13 +346,49 @@ trademark issue under FiveM's ToS.
 - **Garages** — lists vehicles owned via `player_vehicles`; store while
   inside your current vehicle at a garage, retrieve while standing at
   one. Ownership/state/proximity are all re-checked server-side.
+- **Bank** — cash/bank balance at a glance, deposit/withdraw/transfer
+  (transfer resolves the recipient by phone number and only succeeds if
+  they're online), with a running activity log and an automatic mail
+  receipt sent to both sides of a transfer.
+- **Mail** — a real inbox other resources can drop system mail into via
+  the `SendMail(citizenid, senderLabel, subject, body)` export (bank
+  receipts use it today; a future admin broadcast or marketplace-sale
+  notice can too). Capped at `Config.Mail.MaxPerPlayer`, oldest trimmed
+  first.
+- **Marketplace** — player-to-player classifieds: title, price,
+  description, optional image, capped per player via
+  `Config.Marketplace.ListingLimitPerPlayer`. "Message Seller" drops you
+  straight into a Messages conversation with them.
+- **Notes** — simple private notes, create/edit/delete, capped via
+  `Config.Notes.MaxPerPlayer`.
+- **Crypto** — a single server-authoritative coin (`Config.Crypto.CoinName`/
+  `CoinTicker`) that random-walks in price on a fixed tick, clamped to a
+  min/max band and persisted so it survives restarts. Buy/sell spends or
+  credits your **bank** balance; a sparkline shows recent price history.
+  Not tied to any real cryptocurrency — it's a self-contained in-world
+  economy toy.
+- **Gallery** — a personal saved-images board (caption + image URL,
+  same host whitelist as Wire/Picta/Loopz). It's a place to save images
+  you already have a link to, not an in-world camera.
+- **Settings** — pick a preset wallpaper, or set a custom one from any
+  whitelisted image host (Discord CDN, Imgur, etc. —
+  `Config.ImageHostWhitelist`, validated server-side); toggle **No
+  Caller ID** to show "Unknown" instead of your real number on
+  outgoing Phone/FaceTime calls; view and copy your own number.
 
 **Known limitations, by design for this phase:**
 - **Loopz isn't real video.** Embedding arbitrary video in an NUI
   reliably and safely is a bigger job than this phase — it's simplified
   to the same text+image mechanism as Picta, just presented separately.
-- Image posts are restricted to `Config.ImageHostWhitelist` (same hosts
-  hazy_mdt already trusts for mugshots) to avoid arbitrary URLs.
+- **Gallery isn't a real camera.** There's no in-world photo capture —
+  you paste a link to an existing image and it's saved to your board,
+  same as a Picta/Loopz post.
+- Image posts (Wire/Picta/Loopz/Marketplace/Gallery/wallpapers) are
+  restricted to `Config.ImageHostWhitelist` (same hosts hazy_mdt
+  already trusts for mugshots) to avoid arbitrary URLs.
+- **FaceTime's video quality depends on your network path** — see
+  above. It's a genuine WebRTC implementation, not a mock, but two
+  players behind unusually strict NATs could still fail to connect.
 
 `Config.RequireItem` is now **true** — `hd_inventory` exists and seeds
 every new citizen with a `phone` item (`Config.StarterItems` in
@@ -252,8 +404,9 @@ scratch, no third-party code or assets.
   `Config.MaxWeight`), drag to move/stack, **Shift+drag** to split a
   stack, **right-click** for Use / Split / Drop, drag off either panel
   to drop an item on the ground.
-- **Hotbar** — slots 1-5 double as the hotbar, always visible on-screen
-  (not just while the grid's open) and usable with keys **1-5** any time.
+- **Hotbar** — slots 1-5 double as the hotbar, usable with keys **1-5**
+  any time. The HUD itself is hidden by default — **hold Z**
+  (`Config.HotbarToggleKey`) to show it, release to hide it again.
 - **Dual-panel containers** — your inventory (always the left panel)
   opens alongside a secondary container on the right: **glovebox**/
   **trunk** (`/glovebox`, `/trunk` — glovebox requires being in the
@@ -282,10 +435,12 @@ scratch, no third-party code or assets.
   what a future car-dealer or evidence system would call).
 
 Ground drops now render as a real world prop, not just a marker —
-`Config.DropProp` (default `prop_med_bag_01b`, the same battle-tested
-default [ox_inventory](https://github.com/overextended/ox_inventory)
-itself ships) rather than one accurate model per item, which isn't a
-realistic ask across 20+ items. Each prop is spawned **local and
+resolved **per item** via `Config.ItemDropProps` (`byName` for
+specific items like `moneybag`/`phone`/`weed_baggy`, `byType` for
+whole categories like every weapon-type item at once), falling back to
+the single `Config.DropProp` (default `prop_med_bag_01b`, the same
+battle-tested default [ox_inventory](https://github.com/overextended/ox_inventory)
+itself ships) for anything unmapped. Each prop is spawned **local and
 non-networked** (`CreateObject(..., false, true, true)`) — purely
 decorative, proximity-culled per client — exactly the pattern
 ox_inventory's own source uses for this, not something invented here.
@@ -449,6 +604,13 @@ top (`isboss`) grade of a listed job (`Config.Societies` — `police`,
   could both pass a balance check that only actually covered one of
   them — the WHERE clause itself is now the check, evaluated
   atomically against each row as MySQL locks it for the write.
+- **Every deposit/withdrawal is now logged** — `AddFunds`/`RemoveFunds`
+  both take optional `reason`/`actor` arguments and write a row to
+  `hd_society_transactions` on every call (every caller below has been
+  updated to pass a meaningful reason: `'fine'`, `'salary'`,
+  `'cardealer-cut'`, `'boss-deposit'`, etc.). **`/societyhistory
+  [society]`** reports the last 10 — a boss sees only their own
+  society, `hd.admin` can check any of them.
 
 ## Fines (`resources/[hd]/hd_fines`)
 
@@ -514,6 +676,20 @@ command syntax.
   Fires exactly once per crossing either way, not on every fine after
   — paying it back down and crossing the threshold again later fires
   it again, which is correct, not a bug.
+- **Debt decay** (`Config.Debt.Decay`) — a periodic tick knocks
+  `AmountPerTick` off any debt row older than `GraceDays`, deleting it
+  once it reaches zero. Runs entirely in SQL against `created`, so
+  there's nothing extra to track per row.
+- **`/waivedebt [id] [amount|all]`** — `hd.admin` only. The immediate,
+  on-demand version of what Decay does gradually; same oldest-first
+  split as `/paydebt`, just without touching anyone's bank.
+- **The warrant is now enforceable, not just a notification** —
+  `resources/[jobs]/hd_policejob`'s `/detain [server id]` is the actual
+  arrest: an on-duty officer next to a citizen with an active warrant
+  clears it (via new `hazy_mdt` exports, `GetActiveWarrants`/
+  `ClearWarrantsForCitizen`) and holds them in a cell for
+  `Config.Detain.HoldSeconds`. See that resource's own README for the
+  full breakdown.
 
 ## Civilian jobs (`resources/[civjobs]/`)
 
@@ -683,25 +859,35 @@ none of them blocking anything above:
   synthesised tone, not a recording of real Airwave/TETRA equipment. I
   have no way to obtain or license that audio. If a genuine field
   recording matters to you, sourcing one yourself and dropping it in
-  as `ptt_on.wav`/`ptt_off.wav` is the only honest path there.
-- **The auto-warrant still isn't an enforcement mechanic, just a
-  notification (now two of them).** Crossing `Config.Debt.WarrantThreshold`
-  raises a live `hd_dispatch` call **and** writes a persistent row into
-  `hazy_mdt`'s own `mdtpolice_warrants` table (see Fines above) — so it
-  no longer disappears the moment the dispatch call is closed. But
-  nothing *acts* on it automatically either way: no auto-arrest, and
-  nothing stops the target going about their day until an officer
-  actually looks it up or responds to the call themselves.
-- **Debt never expires or gets written off** — once recorded in
-  `hd_fines_debts` it sits there until `/paydebt` clears it, with no
-  admin "waive this debt" command and no time-based decay.
-- **Per-item ground-drop props** — every drop uses one generic
-  `prop_med_bag_01b` model regardless of contents (matching
-  ox_inventory's own default trade-off), rather than a real prop per
-  item.
-- **A transaction log for `hd_society`** — deposits/withdrawals/fines
-  all move real money now, but none of it is logged anywhere a boss
-  could review later (no Discord webhook, no in-game history).
+  as `ptt_on.wav`/`ptt_off.wav` is the only honest path there. Still
+  the one genuinely open item on this list — everything below it has
+  since been closed out.
 
-Say the word and I'll pick any of these up, or anything else you want
-added.
+Four more items used to sit on this list — all four are now built:
+
+- **Auto-warrant enforcement** — a warrant used to be just a
+  notification (a `hd_dispatch` call plus an `hazy_mdt` record).
+  `hd_policejob`'s new `/detain [server id]` (see that resource's own
+  README) is the actual mechanic: an on-duty officer next to a citizen
+  with an active warrant clears it and holds them in a cell for
+  `Config.Detain.HoldSeconds`, all re-verified server-side against
+  `hazy_mdt`'s warrant table rather than trusted from the client.
+- **Debt decay/write-off** — `hd_fines`' `Config.Debt.Decay` now knocks
+  a configurable amount off any debt row older than `GraceDays` on a
+  periodic tick until it's gone, and `/waivedebt [id] [amount|all]`
+  (`hd.admin`) is the immediate, on-demand version of the same thing.
+- **Per-item ground-drop props** — `hd_inventory`'s
+  `Config.ItemDropProps` (`byName`/`byType`) now resolves a real prop
+  per item — every weapon-type item, cash/valuables, phones/laptops,
+  documents, tools, ammo, contraband baggies, and medical items each
+  render distinctly — falling back to the original single
+  `Config.DropProp` for anything unmapped, exactly the same
+  fallback shape as the PNG-icon-with-SVG-fallback pattern above.
+- **A transaction log for `hd_society`** — every `AddFunds`/
+  `RemoveFunds` call now writes a row to `hd_society_transactions`
+  (society, credit/debit, amount, actor, reason), and
+  `/societyhistory [society]` (boss for their own, `hd.admin` for any)
+  reports the last 10.
+
+Say the word and I'll pick up the PTT audio item (if you can get me a
+real recording), or anything else you want added.

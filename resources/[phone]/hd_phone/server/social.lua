@@ -7,18 +7,6 @@
 --  tracking who currently has which app open.
 -- ═══════════════════════════════════════════════════════════════════
 
-local function IsAllowedImageHost(url)
-    if not Config.ImageHostWhitelist or #Config.ImageHostWhitelist == 0 then return true end
-    if type(url) ~= 'string' then return false end
-    local host = url:match('^https?://([^/]+)/?')
-    if not host then return false end
-    host = host:lower()
-    for _, allowed in ipairs(Config.ImageHostWhitelist) do
-        if host == allowed or host:sub(-(#allowed + 1)) == '.' .. allowed then return true end
-    end
-    return false
-end
-
 RegisterNetEvent('hd_phone:server:getFeed', function(app)
     local src = source
     local Player = Framework.Functions.GetPlayer(src)

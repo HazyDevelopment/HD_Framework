@@ -8,6 +8,7 @@
     let panels = { left: null, right: null };
     let dragging = null; // { side, slot, item, amount, locked }
     let ctxTarget = null; // { side, slot, item }
+    let hotbarHidden = true;
 
     const $ = (id) => document.getElementById(id);
 
@@ -33,10 +34,29 @@
         return `hsl(${Math.abs(hash) % 360}, 55%, 45%)`;
     }
 
+    // ═══════════════════════════ ICONS ═════════════════════════════════
+    // Prefers a real PNG dropped into html/images/ (named after item.image,
+    // which defaults to "<item name>.png" — see HD_Framework/shared/items.lua's
+    // `item()` helper). Falls back to the existing hand-drawn SVG set in
+    // icons.js if no PNG exists yet for that item, so nothing breaks before
+    // images are actually uploaded.
+    function iconHtml(item) {
+        const src = `images/${item.image || (item.name + '.png')}`;
+        return `<img class="item-icon" src="${src}" data-fallback="${item.name}" draggable="false">`;
+    }
+
+    // 'error' doesn't bubble on <img>, so this has to run in the capture phase.
+    document.addEventListener('error', (e) => {
+        const img = e.target;
+        if (img.tagName === 'IMG' && img.classList.contains('item-icon')) {
+            img.outerHTML = HD_ICONS.get(img.dataset.fallback);
+        }
+    }, true);
+
     // ═══════════════════════════ RENDER: HOTBAR ═══════════════════════
     function renderHotbar() {
         const hb = $('hotbar');
-        if (!panels.left) { hb.classList.add('hidden'); return; }
+        if (!panels.left || hotbarHidden) { hb.classList.add('hidden'); return; }
         hb.classList.remove('hidden');
         hb.innerHTML = '';
         for (let i = 1; i <= HOTBAR_SLOTS; i++) {
@@ -44,7 +64,7 @@
             const el = document.createElement('div');
             el.className = 'hotbar-slot';
             el.innerHTML = `<span class="hotbar-key">${i}</span>` +
-                (item ? `<div class="item-tile" style="--c:${colorFor(item.name)}">${HD_ICONS.get(item.name)}</div>${item.amount > 1 ? `<span class="hotbar-amount">${item.amount}</span>` : ''}` : '');
+                (item ? `<div class="item-tile" style="--c:${colorFor(item.name)}">${iconHtml(item)}</div>${item.amount > 1 ? `<span class="hotbar-amount">${item.amount}</span>` : ''}` : '');
             hb.appendChild(el);
         }
     }
@@ -73,7 +93,7 @@
             cell.dataset.slot = i;
 
             if (item) {
-                cell.innerHTML = `<div class="item-tile" style="--c:${colorFor(item.name)}">${HD_ICONS.get(item.name)}</div>` +
+                cell.innerHTML = `<div class="item-tile" style="--c:${colorFor(item.name)}">${iconHtml(item)}</div>` +
                     (item.amount > 1 ? `<span class="item-amount">${item.amount}</span>` : '');
                 cell.addEventListener('mouseenter', (e) => showTooltip(e, item));
                 cell.addEventListener('mousemove', moveTooltip);
@@ -118,7 +138,7 @@
         dragging = { side, slot, item, amount, locked };
         const ghost = $('ghost');
         ghost.style.background = colorFor(item.name);
-        ghost.innerHTML = HD_ICONS.get(item.name);
+        ghost.innerHTML = iconHtml(item);
         ghost.classList.remove('hidden');
         positionGhost(e);
         document.addEventListener('mousemove', onDragMove);
@@ -229,6 +249,10 @@
                 panels[d.side] = d.payload;
                 if (d.side === 'left') renderHotbar();
                 renderPanel(d.side);
+                break;
+            case 'hotbarVisibility':
+                hotbarHidden = d.hidden;
+                renderHotbar();
                 break;
         }
     });

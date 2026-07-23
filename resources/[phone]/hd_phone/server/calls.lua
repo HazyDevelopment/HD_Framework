@@ -54,8 +54,9 @@ RegisterNetEvent('hd_phone:server:startCall', function(toNumber)
     nextCallId = nextCallId + 1
     ActiveCalls[id] = { id = id, callerSrc = src, callerNumber = myNumber, targetSrc = targetSrc, targetNumber = toNumber, status = 'ringing' }
 
+    local displayNumber = HasNoCallerId(src) and 'Unknown' or myNumber
     TriggerClientEvent('hd_phone:client:callRinging', src, id, toNumber)
-    TriggerClientEvent('hd_phone:client:incomingCall', targetSrc, id, myNumber, GetDisplayName(src))
+    TriggerClientEvent('hd_phone:client:incomingCall', targetSrc, id, displayNumber, GetDisplayName(src))
 
     CreateThread(function()
         Wait(Config.Calls.RingTimeoutSeconds * 1000)

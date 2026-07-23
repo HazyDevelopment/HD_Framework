@@ -123,3 +123,24 @@ RegisterCommand('givevehicle', function(source, args)
     )
     Notify(src, ('Gave %s a %s (%s), stored at garage "%s".'):format(Target.PlayerData.citizenid, model, plate, garageKey), 'success')
 end, false)
+
+RegisterCommand('giveitem', function(source, args)
+    local src = source
+    if src ~= 0 and not IsAdmin(src) then Notify(src, 'No permission.', 'error') return end
+
+    local targetId = tonumber(args[1])
+    local itemName = args[2]
+    local amount = tonumber(args[3]) or 1
+    local Target = targetId and HD.Functions.GetPlayer(targetId)
+
+    if not Target or not itemName then Notify(src, 'Usage: /giveitem [id] [item] [amount]', 'error') return end
+    if GetResourceState('hd_inventory') ~= 'started' then Notify(src, 'hd_inventory is not running.', 'error') return end
+
+    local ok = exports['hd_inventory']:AddItem(targetId, itemName, amount)
+    if ok then
+        Notify(src, ('Gave %s x%s to %s.'):format(itemName, amount, Target.PlayerData.citizenid), 'success')
+        Notify(targetId, ('You received %s x%s.'):format(itemName, amount), 'info')
+    else
+        Notify(src, 'Failed — check the item name (shared/items.lua) or inventory space.', 'error')
+    end
+end, false)

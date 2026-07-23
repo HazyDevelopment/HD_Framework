@@ -128,9 +128,9 @@ body {
     color: #fff;
     background: var(--c, #3E7CB1);
 }
-.item-tile svg { width: 24px; height: 24px; flex-shrink: 0; }
+.item-tile svg, .item-tile .item-icon { width: 24px; height: 24px; flex-shrink: 0; object-fit: contain; }
 .hotbar-slot .item-tile { width: 34px; height: 34px; }
-.hotbar-slot .item-tile svg { width: 20px; height: 20px; }
+.hotbar-slot .item-tile svg, .hotbar-slot .item-tile .item-icon { width: 20px; height: 20px; }
 
 .item-amount {
     position: absolute;
@@ -162,7 +162,7 @@ body {
     box-shadow: 0 6px 18px rgba(0,0,0,0.5);
     opacity: 0.92;
 }
-#ghost svg { width: 28px; height: 28px; }
+#ghost svg, #ghost .item-icon { width: 28px; height: 28px; object-fit: contain; }
 
 /* ═══════════════════════════ TOOLTIP ═══════════════════════════════════ */
 #tooltip {

@@ -270,6 +270,13 @@ RegisterNetEvent('hd_inventory:server:useItem', function(req)
     local def = GetItemDef(item.name)
     if not def or not def.useable then return end
 
+    -- Weapon-type items toggle equip on the ped instead of being
+    -- consumed — see the matching client/main.lua handler.
+    if def.type == 'weapon' then
+        TriggerClientEvent('hd_inventory:client:toggleWeapon', src, item.name, item.metadata and item.metadata.ammo or 0)
+        return
+    end
+
     -- Default behaviour: consume one unit and notify. Item-specific
     -- effects (heal, open a sub-menu, etc.) are a natural extension
     -- point — branch on def.name here per item as they're added.
@@ -293,6 +300,11 @@ RegisterNetEvent('hd_inventory:server:useHotbar', function(slot)
     if not item then return end
     local def = GetItemDef(item.name)
     if not def or not def.useable then return end
+
+    if def.type == 'weapon' then
+        TriggerClientEvent('hd_inventory:client:toggleWeapon', src, item.name, item.metadata and item.metadata.ammo or 0)
+        return
+    end
 
     RemoveItemFromData(data, item.name, 1)
     SaveContainer(ref, data)

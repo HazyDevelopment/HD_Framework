@@ -38,6 +38,7 @@ exports('GetCoreObject', function() return HD end)
 
 -- ═══════════════════════════ READY HANDSHAKE ═════════════════════════
 local ready = false
+local awaitingSelection = false
 
 CreateThread(function()
     while not NetworkIsSessionStarted() do Wait(50) end
@@ -47,9 +48,66 @@ CreateThread(function()
     end
 end)
 
+-- Frozen + faded to black + NUI-focused on character select the whole
+-- time a license has no character loaded yet — mirrors the same
+-- freeze pattern hd_ems already uses for its downed state, just for a
+-- different reason.
+CreateThread(function()
+    while true do
+        local sleep = 500
+        if awaitingSelection then
+            sleep = 0
+            local ped = PlayerPedId()
+            DisableControlAction(0, 1, true)  -- look
+            DisableControlAction(0, 2, true)
+            DisableControlAction(0, 30, true) -- move
+            DisableControlAction(0, 31, true)
+            DisableControlAction(0, 24, true) -- attack
+            DisableControlAction(0, 25, true) -- aim
+            DisableControlAction(0, 37, true) -- weapon wheel
+        end
+        Wait(sleep)
+    end
+end)
+
+RegisterNetEvent('hd:client:showCharacterSelect', function(characters, maxSlots)
+    awaitingSelection = true
+    DoScreenFadeOut(0)
+    FreezeEntityPosition(PlayerPedId(), true)
+    SetNuiFocus(true, true)
+    SendNUIMessage({ action = 'showSelect', characters = characters, maxSlots = maxSlots })
+end)
+
+RegisterNUICallback('selectCharacter', function(data, cb)
+    TriggerServerEvent('hd:server:selectCharacter', data.citizenid)
+    cb({})
+end)
+RegisterNUICallback('deleteCharacter', function(data, cb)
+    TriggerServerEvent('hd:server:deleteCharacter', data.citizenid)
+    cb({})
+end)
+RegisterNUICallback('getStarterFlats', function(_, cb)
+    TriggerServerEvent('hd:server:getStarterFlats')
+    cb({})
+end)
+RegisterNUICallback('createCharacter', function(data, cb)
+    TriggerServerEvent('hd:server:createCharacter', data)
+    cb({})
+end)
+RegisterNetEvent('hd:client:starterFlats', function(flats)
+    SendNUIMessage({ action = 'starterFlats', flats = flats })
+end)
+
 RegisterNetEvent('hd:client:onPlayerLoaded', function(playerData)
     ready = true
     HD.PlayerData = playerData
+
+    if awaitingSelection then
+        awaitingSelection = false
+        SetNuiFocus(false, false)
+        SendNUIMessage({ action = 'hide' })
+        FreezeEntityPosition(PlayerPedId(), false)
+    end
 
     -- Spawn the ped at their saved position (or the configured default
     -- for brand-new citizens) now that data has arrived.

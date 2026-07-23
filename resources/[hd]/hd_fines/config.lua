@@ -52,6 +52,7 @@ Config.Debt = {
     PayCommand = 'paydebt',
     CheckOwnCommand = 'debts',
     CheckOtherCommand = 'checkdebt', -- police/ambulance/admin only
+    WaiveCommand = 'waivedebt',      -- hd.admin only — see below
 
     -- Fires exactly once per crossing — the instant a fine pushes
     -- someone's total debt from under WarrantThreshold to at-or-over
@@ -62,6 +63,19 @@ Config.Debt = {
     AutoWarrant = {
         Enabled = true,
         Priority = 1, -- Grade 1 — Immediate, matches hd_dispatch's Config.PriorityGrades
+    },
+
+    -- Debt used to sit forever until /paydebt cleared it, with no
+    -- time-based decay and no admin write-off — see the top-level
+    -- README's "Where to go from here". A periodic tick now knocks
+    -- AmountPerTick off any debt row older than GraceDays, deleting it
+    -- once it reaches zero; /waivedebt is the immediate admin version
+    -- of the same thing.
+    Decay = {
+        Enabled = true,
+        GraceDays = 7,        -- a debt row has to sit unpaid at least this long before it starts decaying
+        IntervalMinutes = 60, -- how often the decay tick runs
+        AmountPerTick = 50,   -- knocked off every eligible row per tick
     },
 }
 

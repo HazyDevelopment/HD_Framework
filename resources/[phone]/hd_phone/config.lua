@@ -85,6 +85,90 @@ Config.Garages = {
     },
 }
 
+-- ═══════════════════════════ BANK ═══════════════════════════════════
+-- Transfers only reach an ONLINE recipient (resolved by phone number,
+-- same as Calls already require) — same scope discipline this
+-- resource already applies elsewhere rather than reaching into an
+-- offline player's saved row directly.
+Config.Bank = {
+    MinTransfer = 1,
+    MaxTransfer = 500000,
+}
+
+-- ═══════════════════════════ MARKETPLACE ════════════════════════════
+Config.Marketplace = {
+    MaxTitleLength = 80,
+    MaxDescriptionLength = 300,
+    MaxPrice = 10000000,
+    ListingLimitPerPlayer = 10,
+}
+
+-- ═══════════════════════════ NOTES ══════════════════════════════════
+Config.Notes = {
+    MaxLength = 2000,
+    MaxPerPlayer = 30,
+}
+
+-- ═══════════════════════════ CRYPTO ═════════════════════════════════
+-- One simulated coin, server-authoritative random-walk price. Not
+-- tied to any real exchange/API — a self-contained economy toy.
+Config.Crypto = {
+    CoinName = 'HD Coin',
+    CoinTicker = 'HDC',
+    TickIntervalMs = 30000,   -- how often the price moves
+    VolatilityPercent = 3.5,  -- max %% swing per tick, either direction
+    MinPrice = 5.00,
+    MaxPrice = 5000.00,
+    PriceHistoryLength = 30,  -- how many past ticks the client-side sparkline keeps
+}
+
+-- ═══════════════════════════ GALLERY ════════════════════════════════
+-- A personal saved-image board, not a literal device camera — same
+-- "original, simplified take" approach already used for Loopz not
+-- being real video. Reuses Config.ImageHostWhitelist above.
+Config.Gallery = {
+    MaxCaptionLength = 150,
+    MaxPerPlayer = 40,
+}
+
+-- ═══════════════════════════ MAIL ═══════════════════════════════════
+Config.Mail = {
+    MaxPerPlayer = 100, -- oldest trimmed past this on send
+}
+
+-- ═══════════════════════════ SETTINGS / WALLPAPERS ══════════════════
+-- Applied as the home screen background — key must match a CSS rule
+-- in html/css/style.css's "WALLPAPERS" section.
+Config.Wallpapers = {
+    { key = 'default',  label = 'Default' },
+    { key = 'sunset',   label = 'Sunset' },
+    { key = 'ocean',    label = 'Ocean' },
+    { key = 'midnight', label = 'Midnight' },
+    { key = 'mono',     label = 'Mono' },
+}
+
+-- ═══════════════════════════ AIRDROP ════════════════════════════════
+-- Broadcasts your number + character name to every other online phone
+-- within Radius meters; each nearby player gets an accept/decline
+-- prompt, and accepting just runs the normal saveContact flow on
+-- their end — no separate contact-storage code needed.
+Config.Airdrop = {
+    Radius = 10.0,
+}
+
+-- ═══════════════════════════ APP STORE ══════════════════════════════
+-- Phone, Messages, Contacts, App Store and Settings are core apps —
+-- always on the home screen, can't be removed (mirrors iOS system
+-- apps). Everything else starts uninstalled and only shows up once a
+-- citizen has "downloaded" it here — this is the authoritative id
+-- list server/appstore.lua validates installApp/uninstallApp against,
+-- kept in sync with the `core: false` entries in html/js/app.js's
+-- APPS array.
+Config.DownloadableApps = {
+    'wire', 'picta', 'loopz', 'garages', 'bank', 'mail', 'marketplace', 'notes', 'crypto', 'gallery',
+    'airdrop', 'facetime',
+}
+
 -- ═══════════════════════════ NOTIFY ══════════════════════════════════
 Config.Notify = function(msg, ntype)
     SetNotificationTextEntry('STRING')

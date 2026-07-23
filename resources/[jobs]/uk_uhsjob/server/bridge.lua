@@ -108,9 +108,12 @@ end
 -- -------------------------------------------------------------------
 function Bridge.GiveItem(source, itemName, count)
     if Config.Framework == 'qbcore' then
-        local Player = QBCore.Functions.GetPlayer(source)
-        if not Player then return end
-        Player.Functions.AddItem(itemName, count or 1)
+        -- HD_Framework's Player object has no Functions.AddItem — items
+        -- live in hd_inventory, not on the core player object. Call its
+        -- real server export instead (same one AddItem/RemoveItem/HasItem
+        -- are documented under in hd_inventory/server/inventory.lua).
+        if GetResourceState('hd_inventory') ~= 'started' then return end
+        exports['hd_inventory']:AddItem(source, itemName, count or 1)
     else
         local xPlayer = ESX.GetPlayerFromId(source)
         if not xPlayer then return end

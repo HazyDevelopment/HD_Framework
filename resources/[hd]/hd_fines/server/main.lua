@@ -69,6 +69,24 @@ local function GetTotalDebt(citizenid)
     return MySQL.scalar.await('SELECT SUM(amount) FROM hd_fines_debts WHERE citizenid = ?', { citizenid }) or 0
 end
 
+-- ═══════════════════════════ DEBT DECAY ═══════════════════════════════
+-- Runs entirely in SQL: any row older than GraceDays loses AmountPerTick
+-- every IntervalMinutes, indefinitely (created never changes, so a row
+-- that's already past the grace period keeps decaying tick after tick
+-- until it's gone) — no need to track a separate "last decayed" column.
+if Config.Debt.Enabled and Config.Debt.Decay.Enabled then
+    CreateThread(function()
+        while true do
+            Wait(Config.Debt.Decay.IntervalMinutes * 60000)
+            MySQL.update(
+                'UPDATE hd_fines_debts SET amount = GREATEST(0, amount - ?) WHERE created < (NOW() - INTERVAL ? DAY)',
+                { Config.Debt.Decay.AmountPerTick, Config.Debt.Decay.GraceDays }
+            )
+            MySQL.query('DELETE FROM hd_fines_debts WHERE amount <= 0')
+        end
+    end)
+end
+
 -- ═══════════════════════════ AUTO WARRANT ═════════════════════════════
 -- The target is guaranteed online here — /fine already required them
 -- to be within Config.TargetRadius of the issuing officer to reach
@@ -171,7 +189,7 @@ RegisterCommand(Config.Command, function(source, args)
 
     if toCollect > 0 then
         Target.Functions.RemoveMoney('bank', toCollect, 'hd-fines')
-        exports['hd_society']:AddFunds(Player.PlayerData.job.name, toCollect)
+        exports['hd_society']:AddFunds(Player.PlayerData.job.name, toCollect, 'fine', Player.PlayerData.citizenid)
     end
 
     if debtAmount > 0 and Config.Debt.Enabled then
@@ -229,7 +247,7 @@ RegisterCommand(Config.Debt.PayCommand, function(source, args)
         remaining = remaining - pay
 
         if GetResourceState('hd_society') == 'started' then
-            exports['hd_society']:AddFunds(debt.society, pay)
+            exports['hd_society']:AddFunds(debt.society, pay, 'debt-payoff', Player.PlayerData.citizenid)
         end
 
         if pay >= debt.amount then
@@ -282,4 +300,62 @@ RegisterCommand(Config.Debt.CheckOtherCommand, function(source, args)
         total,
         warrant and ' ⚠ Exceeds the warrant threshold.' or ''
     ), warrant and 'error' or 'info')
+end, false)
+
+-- ═══════════════════════════ WAIVE DEBT (ADMIN) ════════════════════════
+-- Immediate, on-demand version of what Decay does gradually — same
+-- oldest-first split as /paydebt, just without touching anyone's bank.
+RegisterCommand(Config.Debt.WaiveCommand, function(source, args)
+    local src = source
+    if src ~= 0 and not IsPlayerAceAllowed(src, 'hd.admin') then
+        TriggerClientEvent('HD:Client:Notify', src, 'No permission.', 'error')
+        return
+    end
+
+    local targetId = tonumber(args[1])
+    local Target = targetId and Framework.Functions.GetPlayer(targetId)
+    if not Target then
+        TriggerClientEvent('HD:Client:Notify', src, ('Usage: /%s [id] [amount|all]'):format(Config.Debt.WaiveCommand), 'error')
+        return
+    end
+
+    local total = GetTotalDebt(Target.PlayerData.citizenid)
+    if total <= 0 then
+        TriggerClientEvent('HD:Client:Notify', src, 'They have no outstanding debt.', 'info')
+        return
+    end
+
+    local amountArg = args[2]
+    if not amountArg or amountArg:lower() == 'all' then
+        MySQL.query('DELETE FROM hd_fines_debts WHERE citizenid = ?', { Target.PlayerData.citizenid })
+        TriggerClientEvent('HD:Client:Notify', src, ('Waived all £%d of their debt.'):format(total), 'success')
+        TriggerClientEvent('HD:Client:Notify', targetId, 'Your outstanding debt has been waived.', 'success')
+        return
+    end
+
+    local amount = math.floor(tonumber(amountArg) or 0)
+    if amount <= 0 then
+        TriggerClientEvent('HD:Client:Notify', src, ('Usage: /%s [id] [amount|all]'):format(Config.Debt.WaiveCommand), 'error')
+        return
+    end
+
+    local remaining = amount
+    local debts = MySQL.query.await('SELECT * FROM hd_fines_debts WHERE citizenid = ? ORDER BY created ASC', {
+        Target.PlayerData.citizenid
+    }) or {}
+    for _, debt in ipairs(debts) do
+        if remaining <= 0 then break end
+        local waive = math.min(remaining, debt.amount)
+        remaining = remaining - waive
+        if waive >= debt.amount then
+            MySQL.query('DELETE FROM hd_fines_debts WHERE id = ?', { debt.id })
+        else
+            MySQL.update('UPDATE hd_fines_debts SET amount = amount - ? WHERE id = ?', { waive, debt.id })
+        end
+    end
+
+    local waived = amount - remaining
+    local newTotal = GetTotalDebt(Target.PlayerData.citizenid)
+    TriggerClientEvent('HD:Client:Notify', src, ('Waived £%d of their debt. Remaining: £%d'):format(waived, newTotal), 'success')
+    TriggerClientEvent('HD:Client:Notify', targetId, ('£%d of your debt has been waived by staff.'):format(waived), 'success')
 end, false)

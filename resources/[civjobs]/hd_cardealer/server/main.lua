@@ -58,7 +58,7 @@ RegisterNetEvent('hd_cardealer:server:purchase', function(model)
     )
 
     if GetResourceState('hd_society') == 'started' and Config.SocietyCut > 0 then
-        exports['hd_society']:AddFunds('cardealer', math.floor(entry.price * Config.SocietyCut))
+        exports['hd_society']:AddFunds('cardealer', math.floor(entry.price * Config.SocietyCut), 'cardealer-cut', Player.PlayerData.citizenid)
     end
 
     if GetResourceState('hd_mechanic') == 'started' then

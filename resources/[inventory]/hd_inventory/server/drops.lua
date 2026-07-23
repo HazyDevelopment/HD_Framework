@@ -11,15 +11,47 @@
 
 Drops = {}
 
+-- Not persisted as its own DB column — it's fully derivable from a
+-- drop's `data` (which item names it holds) any time it's needed, so
+-- there's nothing to keep in sync on restart. Picks the first item
+-- found (a fresh drop from server/inventory.lua's dropItem handler is
+-- always single-item; one merged onto an existing pile afterward keeps
+-- whatever prop the drop was created with — see config.lua's
+-- Config.ItemDropProps comment for why that trade-off is fine).
+function ResolveDropProp(data)
+    for _, entry in pairs(data or {}) do
+        local def = GetItemDef(entry.name)
+        if def then
+            return def.model or Config.ItemDropProps.byName[entry.name] or Config.ItemDropProps.byType[def.type] or Config.DropProp
+        end
+    end
+    return Config.DropProp
+end
+
 CreateThread(function()
     Wait(2000) -- give server/main.lua's DB-verify check a head start; harmless either way, this is wrapped in pcall
     local ok, rows = pcall(function() return MySQL.query.await('SELECT id, x, y, z, data FROM hd_inventory_drops') end)
     if not ok or not rows then return end -- table missing (not installed yet) — Drops just stays empty
+
+    -- ResolveDropProp needs ItemDefs (server/main.lua only populates it
+    -- once HD_Framework reports 'started'), and the flat Wait(2000)
+    -- above isn't a guarantee of that on a slow boot. Model is computed
+    -- once right here and never revisited, so if ItemDefs were still
+    -- empty at this point every restored drop would silently sit on
+    -- the fallback prop for the rest of the session, not just a
+    -- one-off flicker. Capped so a genuinely broken HD_Framework
+    -- doesn't hang this thread forever — it just proceeds with
+    -- whatever's available at that point.
+    local waited = 0
+    while next(ItemDefs) == nil and waited < 10000 do Wait(100) waited = waited + 100 end
+
     for _, row in ipairs(rows) do
+        local data = json.decode(row.data) or {}
         Drops[row.id] = {
             id = row.id,
             coords = { x = row.x, y = row.y, z = row.z },
-            data = json.decode(row.data) or {},
+            data = data,
+            model = ResolveDropProp(data),
         }
     end
     if #rows > 0 then print(('^2[hd_inventory]^7 Restored %d ground drop(s) from the last session.'):format(#rows)) end
@@ -53,7 +85,7 @@ function CreateDrop(coords, data)
     local id = MySQL.insert.await('INSERT INTO hd_inventory_drops (x, y, z, data) VALUES (?, ?, ?, ?)', {
         coords.x, coords.y, coords.z, json.encode(data)
     })
-    Drops[id] = { id = id, coords = { x = coords.x, y = coords.y, z = coords.z }, data = data }
+    Drops[id] = { id = id, coords = { x = coords.x, y = coords.y, z = coords.z }, data = data, model = ResolveDropProp(data) }
     TriggerClientEvent('hd_inventory:client:newDrop', -1, Drops[id])
     return id
 end

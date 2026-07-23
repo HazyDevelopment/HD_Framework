@@ -29,7 +29,7 @@ local function PaySocietyWage(Player, job)
         return
     end
 
-    local paid = exports['hd_society']:RemoveFunds(job.name, job.payment)
+    local paid = exports['hd_society']:RemoveFunds(job.name, job.payment, 'salary', Player.PlayerData.citizenid)
     if paid then
         Player.Functions.AddMoney('bank', job.payment, 'job-salary-society')
         TriggerClientEvent('HD:Client:Notify', Player.PlayerData.source, ('Wages paid: £%s'):format(job.payment), 'success')

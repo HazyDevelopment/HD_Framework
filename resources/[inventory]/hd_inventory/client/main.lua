@@ -44,6 +44,18 @@ for i = 1, Config.HotbarSlots do
     end, false)
 end
 
+-- Hotbar HUD is hidden by default and only shows while the key is
+-- physically held down. FiveM's +/- keymapping convention binds
+-- keydown to the '+' command and keyup to the '-' command
+-- automatically via a single RegisterKeyMapping call.
+RegisterKeyMapping('hd_inventory_hotbar_toggle', 'HD Inventory: hold to show hotbar', 'keyboard', Config.HotbarToggleKey)
+RegisterCommand('+hd_inventory_hotbar_toggle', function()
+    SendNUIMessage({ action = 'hotbarVisibility', hidden = false })
+end, false)
+RegisterCommand('-hd_inventory_hotbar_toggle', function()
+    SendNUIMessage({ action = 'hotbarVisibility', hidden = true })
+end, false)
+
 -- ═══════════════════════════ NUI → SERVER ═════════════════════════════
 RegisterNUICallback('close', function(_, cb) CloseInventory() cb({}) end)
 RegisterNUICallback('moveItem', function(data, cb) TriggerServerEvent('hd_inventory:server:moveItem', data) cb({}) end)
@@ -61,6 +73,30 @@ RegisterNetEvent('hd_inventory:client:forceOpen', function()
     invOpen = true
     SetNuiFocus(true, true)
     SendNUIMessage({ action = 'show' })
+end)
+
+-- ═══════════════════════════ WEAPON-TYPE ITEMS ═════════════════════════
+-- "Use" on a type='weapon' item (server/inventory.lua) toggles it in the
+-- ped's hand instead of consuming it — item name IS the weapon hash,
+-- lowercased (e.g. 'weapon_nightstick' -> WEAPON_NIGHTSTICK), the same
+-- convention QBCore-ecosystem weapon items use.
+RegisterNetEvent('hd_inventory:client:toggleWeapon', function(itemName, ammo)
+    local ped = PlayerPedId()
+    local hash = GetHashKey(itemName:upper())
+    if HasPedGotWeapon(ped, hash, false) then
+        RemoveWeaponFromPed(ped, hash)
+    else
+        GiveWeaponToPed(ped, hash, ammo or 0, false, true)
+        SetCurrentPedWeapon(ped, hash, true)
+    end
+end)
+
+-- Force-unequip regardless of current state — used when a weapon item is
+-- removed from the inventory entirely (returned to an armoury, dropped,
+-- etc.) so a held weapon can't become a phantom no longer backed by an
+-- inventory slot.
+RegisterNetEvent('hd_inventory:client:forceUnequipWeapon', function(itemName)
+    RemoveWeaponFromPed(PlayerPedId(), GetHashKey(itemName:upper()))
 end)
 
 -- ═══════════════════════════ EXPORTS FOR OTHER RESOURCES ══════════════

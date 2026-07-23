@@ -34,11 +34,26 @@ local function GetBalance(society)
     return MySQL.scalar.await('SELECT balance FROM hd_society_funds WHERE society = ?', { society }) or 0
 end
 
-local function AddFunds(society, amount)
+-- Every AddFunds/RemoveFunds call lands one row here — see the
+-- top-level README's "Where to go from here" ("no transaction log for
+-- hd_society"). `actor`/`reason` are both optional; a caller that
+-- doesn't pass them just gets a row with NULLs instead of failing.
+local function LogTransaction(society, ttype, amount, actor, reason)
+    MySQL.insert('INSERT INTO hd_society_transactions (society, type, amount, actor, reason) VALUES (?, ?, ?, ?, ?)', {
+        society, ttype, amount, actor, reason
+    })
+end
+
+-- `reason`/`actor` are optional on both — existing external callers
+-- that only ever passed (society, amount) keep working exactly as
+-- before, they just log with a NULL reason/actor instead of a
+-- meaningful one until updated to pass them.
+local function AddFunds(society, amount, reason, actor)
     amount = math.floor(tonumber(amount) or 0)
     if amount <= 0 then return false end
     EnsureRow(society)
     MySQL.update('UPDATE hd_society_funds SET balance = balance + ? WHERE society = ?', { amount, society })
+    LogTransaction(society, 'credit', amount, actor, reason)
     return true
 end
 
@@ -52,7 +67,7 @@ end
 -- (0 = nothing matched, i.e. insufficient funds or unknown society).
 -- This replaced an earlier read-check-write version that had exactly
 -- that race.
-local function RemoveFunds(society, amount)
+local function RemoveFunds(society, amount, reason, actor)
     amount = math.floor(tonumber(amount) or 0)
     if amount <= 0 then return false end
     EnsureRow(society)
@@ -60,6 +75,7 @@ local function RemoveFunds(society, amount)
         'UPDATE hd_society_funds SET balance = balance - ? WHERE society = ? AND balance >= ?',
         { amount, society, amount }
     )
+    if affected > 0 then LogTransaction(society, 'debit', amount, actor, reason) end
     return affected > 0
 end
 
@@ -94,7 +110,7 @@ RegisterNetEvent('hd_society:server:deposit', function(amount)
         return
     end
 
-    AddFunds(Player.PlayerData.job.name, amount)
+    AddFunds(Player.PlayerData.job.name, amount, 'boss-deposit', Player.PlayerData.citizenid)
     TriggerClientEvent('HD:Client:Notify', src, ('Deposited £%d.'):format(amount), 'success')
     TriggerClientEvent('hd_society:client:balance', src, GetBalance(Player.PlayerData.job.name))
 end)
@@ -106,7 +122,7 @@ RegisterNetEvent('hd_society:server:withdraw', function(amount)
 
     amount = math.floor(tonumber(amount) or 0)
     if amount <= 0 then return end
-    if not RemoveFunds(Player.PlayerData.job.name, amount) then
+    if not RemoveFunds(Player.PlayerData.job.name, amount, 'boss-withdraw', Player.PlayerData.citizenid) then
         TriggerClientEvent('HD:Client:Notify', src, 'Insufficient society funds.', 'error')
         return
     end
@@ -135,6 +151,48 @@ RegisterCommand('addfunds', function(source, args)
         return
     end
 
-    AddFunds(society, amount)
+    local AdminPlayer = src ~= 0 and Framework.Functions.GetPlayer(src)
+    AddFunds(society, amount, 'admin-seed', AdminPlayer and AdminPlayer.PlayerData.citizenid or 'console')
     TriggerClientEvent('HD:Client:Notify', src, ('Added £%d to %s. New balance: £%d'):format(amount, society, GetBalance(society)), 'success')
+end, false)
+
+-- ═══════════════════════════ TRANSACTION HISTORY ═══════════════════════
+-- No NUI for this — the boss menu stays deposit/withdraw-only, this is
+-- a quick admin/boss lookup tool. Boss sees only their own society;
+-- hd.admin can check any of them (or the caller's own if omitted).
+RegisterCommand('societyhistory', function(source, args)
+    local src = source
+    local Player = src ~= 0 and Framework.Functions.GetPlayer(src)
+    local isAdmin = src == 0 or IsPlayerAceAllowed(src, 'hd.admin')
+
+    local society = args[1]
+    if not society then
+        if IsBoss(Player) then
+            society = Player.PlayerData.job.name
+        else
+            TriggerClientEvent('HD:Client:Notify', src, 'Usage: /societyhistory [society]', 'error')
+            return
+        end
+    elseif not isAdmin and not (IsBoss(Player) and Player.PlayerData.job.name == society) then
+        TriggerClientEvent('HD:Client:Notify', src, 'No permission.', 'error')
+        return
+    end
+
+    local rows = MySQL.query.await(
+        'SELECT type, amount, actor, reason, created FROM hd_society_transactions WHERE society = ? ORDER BY created DESC LIMIT 10',
+        { society }
+    ) or {}
+
+    if #rows == 0 then
+        TriggerClientEvent('HD:Client:Notify', src, ('No recorded transactions for %s yet.'):format(society), 'info')
+        return
+    end
+
+    TriggerClientEvent('HD:Client:Notify', src, ('Last %d transactions for %s (newest first):'):format(#rows, society), 'info')
+    for _, row in ipairs(rows) do
+        local sign = row.type == 'credit' and '+' or '-'
+        TriggerClientEvent('HD:Client:Notify', src,
+            ('%s£%d — %s%s'):format(sign, row.amount, row.reason or 'unspecified', row.actor and (' (' .. row.actor .. ')') or ''),
+            row.type == 'credit' and 'success' or 'error')
+    end
 end, false)
