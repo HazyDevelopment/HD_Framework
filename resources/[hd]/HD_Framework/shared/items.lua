@@ -20,6 +20,11 @@ local function item(name, label, weight, opts)
         image = opts.image or (name .. '.png'),
         unique = opts.unique or false,
         useable = opts.useable or false,
+        -- Reusable tools (the mechanic tablet, in practice) set this to
+        -- false so hd_inventory's useItem/useHotbar handlers don't
+        -- delete them on use like a one-shot consumable — defaults to
+        -- true so every existing item keeps its current behaviour.
+        consumable = opts.consumable == nil and true or opts.consumable,
         shouldClose = opts.shouldClose or false,
         combinable = opts.combinable or nil,
         description = opts.description or '',
@@ -81,7 +86,7 @@ item('water_bottle', 'Bottle of Water', 300, { useable = true, description = 'Qu
 item('sandwich', 'Sandwich', 300, { useable = true, description = 'Fills you up a little' })
 item('firstaid', 'First Aid Kit', 400, { useable = true, description = 'Basic first aid — weaker than a full Medical Kit' })
 item('ifaks', 'IFAK', 300, { useable = true, description = 'Individual First Aid Kit — compact personal-carry trauma kit' })
-item('lockpick', 'Lockpick', 150, { useable = true, description = 'Picks a basic lock' })
+item('lockpick', 'Lockpick', 150, { useable = true, image = 'lockpicks.png', description = 'Picks a basic lock' })
 
 -- ═══════════════════════════════════════════════════════════════════
 --  Everything below registers the rest of the pre-existing PNG icon
@@ -141,6 +146,12 @@ item('police_stormram', 'Enforcer Ram', 4000, { useable = true, description = 'B
 item('screwdriverset', 'Screwdriver Set', 400, { useable = true, description = 'A set of screwdrivers' })
 item('tirerepairkit', 'Tyre Repair Kit', 600, { useable = true, description = 'Repairs a punctured tyre' })
 item('tunerchip', 'Tuner Chip', 300, { description = 'An ECU tuning chip for a vehicle' })
+-- Reusable — see resources/[mechanic]/hd_mechanic. On-duty mechanics
+-- get one automatically the first time they clock on; use it from the
+-- driver's seat of any vehicle to view damage, issue MOT/insurance,
+-- and order parts. consumable = false so it stays in the inventory
+-- after use instead of being deleted like a one-shot kit.
+item('mechanic_tablet', 'Mechanic Tablet', 500, { useable = true, unique = true, consumable = false, image = 'tablet.png', description = 'Vehicle diagnostics, MOT/insurance, and parts ordering' })
 item('walkstick', 'Walking Stick', 500, { description = 'A wooden walking stick' })
 item('workbench', 'Workbench', 5000, { description = 'A general-purpose crafting workbench' })
 
@@ -154,16 +165,22 @@ item('moneybag', 'Bag of Cash', 2000, { description = 'A bag stuffed with cash' 
 item('rolex', 'Luxury Watch', 100, { description = 'An expensive wristwatch' })
 
 -- ─────────────────────────── CRAFTING MATERIALS ───────────────────────
-item('aluminum', 'Aluminium', 300, { description = 'Raw aluminium' })
+-- aluminum/iron/metalscrap/steel/rubber double as field-repair items —
+-- see resources/[mechanic]/hd_mechanic's Config.FieldRepair. Used from
+-- the driver's seat of a damaged vehicle: the four metals patch up
+-- bodywork damage (each a different amount — steel > aluminium > iron
+-- > scrap, roughly by how refined it is), rubber fixes one burst tyre.
+-- Still perfectly ordinary crafting materials otherwise.
+item('aluminum', 'Aluminium', 300, { useable = true, description = 'Raw aluminium — patches vehicle bodywork in a pinch' })
 item('aluminumoxide', 'Aluminium Oxide', 300, { description = 'Refined aluminium oxide' })
 item('copper', 'Copper', 300, { description = 'Raw copper' })
 item('glass', 'Glass', 200, { description = 'A sheet of glass' })
-item('iron', 'Iron', 300, { description = 'Raw iron' })
+item('iron', 'Iron', 300, { useable = true, description = 'Raw iron — patches vehicle bodywork in a pinch' })
 item('ironoxide', 'Iron Oxide', 300, { description = 'Refined iron oxide' })
-item('metalscrap', 'Scrap Metal', 400, { description = 'Scrap metal, useful for repairs or crafting' })
+item('metalscrap', 'Scrap Metal', 400, { useable = true, description = 'Scrap metal — patches vehicle bodywork in a pinch' })
 item('plastic', 'Plastic', 200, { description = 'A block of raw plastic' })
-item('rubber', 'Rubber', 200, { description = 'A block of raw rubber' })
-item('steel', 'Steel', 400, { description = 'Refined steel' })
+item('rubber', 'Rubber', 200, { useable = true, description = 'A block of raw rubber — can fix a burst tyre' })
+item('steel', 'Steel', 400, { useable = true, description = 'Refined steel — patches vehicle bodywork in a pinch' })
 item('thermite', 'Thermite', 400, { description = 'A thermite charge — burns through metal' })
 
 -- ─────────────────────────── CHEMICALS ────────────────────────────────
@@ -182,6 +199,10 @@ item('meth_baggy', 'Bag of Meth', 50, { useable = true, description = 'A small b
 item('meth_tray', 'Tray of Meth', 500, { description = 'A tray of raw methamphetamine' })
 item('oxy', 'Oxycodone', 30, { useable = true, description = 'A prescription-strength painkiller, illicitly obtained' })
 item('rolling_paper', 'Rolling Papers', 10, { description = 'Papers for rolling a joint' })
+item('ocb_papers', 'OCB Rolling Papers', 10, { image = 'ocb.png', description = 'A pack of OCB rolling papers' })
+item('ocb_black', 'OCB Black Rolling Papers', 10, { description = 'A pack of OCB Black rolling papers' })
+item('raw_papers', 'RAW Rolling Papers', 10, { image = 'raw.png', description = 'A pack of RAW rolling papers' })
+item('rizla_silver', 'Rizla Silver Rolling Papers', 10, { image = 'rizzla_silver.png', description = 'A pack of Rizla Silver rolling papers' })
 item('snikkel_candy', 'Snikkel Bar', 100, { useable = true, description = 'A chocolate bar' })
 item('twerks_candy', 'Twerks Bar', 100, { useable = true, description = 'A chocolate bar' })
 item('weed_baggy', 'Bag of Weed', 50, { useable = true, description = 'A small bag of cannabis' })
@@ -203,6 +224,36 @@ item('tosti', 'Toastie', 250, { useable = true, description = 'A toasted sandwic
 item('vodka', 'Vodka', 400, { useable = true, description = 'A bottle of vodka' })
 item('whiskey', 'Whiskey', 400, { useable = true, description = 'A bottle of whiskey' })
 item('wine', 'Wine', 450, { useable = true, description = 'A bottle of wine' })
+
+-- ─────────────────────────── TAKEAWAY & BRANDED DRINKS ─────────────────
+-- More hd_shops stock — see resources/[hd]/hd_shops/config.lua
+-- Config.Stock. Real raster PNG icons (hd_inventory/html/images), not
+-- the hand-drawn SVG set above.
+item('fullburger', 'Deluxe Burger', 500, { useable = true, description = 'A fully-loaded takeaway burger' })
+item('baconburger', 'Bacon Burger', 450, { useable = true, description = 'A burger topped with bacon' })
+item('baconcheeseburger', 'Bacon Cheeseburger', 500, { useable = true, description = 'A burger topped with bacon and cheese' })
+item('cheeseburger', 'Cheeseburger', 350, { useable = true, description = 'A burger topped with cheese' })
+item('doublecheeseburger', 'Double Cheeseburger', 550, { useable = true, description = 'A double-patty cheeseburger' })
+item('hamburger', 'Hamburger', 300, { useable = true, description = 'A plain takeaway burger' })
+item('chickennuggets', 'Chicken Nuggets', 250, { useable = true, description = 'A box of chicken nuggets' })
+item('chips', 'Chips', 300, { useable = true, description = 'A portion of chips' })
+item('kebab', 'Kebab', 500, { useable = true, description = 'A takeaway kebab' })
+item('large_kebab', 'Large Kebab', 750, { useable = true, description = 'A large takeaway kebab' })
+item('hotchocolate', 'Hot Chocolate', 300, { useable = true, description = 'A hot chocolate' })
+item('takeaway_coffee', 'Takeaway Coffee', 300, { useable = true, description = 'A takeaway cup of coffee' })
+item('mcdonalds_drink', 'Fountain Drink', 400, { useable = true, description = 'A takeaway fountain drink' })
+item('7up', '7 Up', 350, { useable = true, description = 'A can of 7 Up' })
+item('cocacola', 'Coca-Cola', 350, { useable = true, description = 'A can of Coca-Cola' })
+item('dietcoke', 'Diet Coke', 350, { useable = true, description = 'A can of Diet Coke' })
+item('fanta', 'Fanta', 350, { useable = true, description = 'A can of Fanta' })
+item('sprite', 'Sprite', 350, { useable = true, description = 'A can of Sprite' })
+item('pepsi', 'Pepsi', 350, { useable = true, description = 'A can of Pepsi' })
+item('pepsi_max', 'Pepsi Max', 350, { useable = true, description = 'A can of Pepsi Max' })
+item('irnbru', 'Irn-Bru', 350, { useable = true, description = 'A can of Irn-Bru' })
+item('lucozade', 'Lucozade', 400, { useable = true, description = 'A bottle of Lucozade' })
+item('monster', 'Monster Energy', 500, { useable = true, description = 'A can of Monster Energy' })
+item('caprisun', 'Capri-Sun', 200, { useable = true, description = 'A pouch of Capri-Sun' })
+item('tango_apple', 'Tango Apple', 350, { useable = true, description = 'A can of Tango Apple' })
 
 -- ─────────────────────────── FISHING & DIVING ─────────────────────────
 item('fish', 'Fish', 300, { useable = true, description = 'A freshly caught fish' })
