@@ -56,11 +56,14 @@ Config.Stock = {
     { item = 'bandage',       price = 8 },
     { item = 'painkillers',   price = 6 },
     { item = 'lockpick',      price = 20 },
+    { item = 'advancedlockpick', price = 60 },
     { item = 'jerry_can',     price = 25 },
+    { item = 'rolling_paper', price = 1 },
 
     -- Takeaway food, hardware, and branded/canned drinks — see
     -- shared/items.lua's "TAKEAWAY & BRANDED DRINKS" section.
     { item = 'repairkit',           price = 45 },
+    { item = 'repairkit_advanced',  price = 120 },
     { item = 'hamburger',           price = 3 },
     { item = 'cheeseburger',        price = 4 },
     { item = 'baconburger',         price = 5 },
