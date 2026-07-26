@@ -76,7 +76,7 @@ item('trauma_kit', 'Trauma Kit', 2000, { useable = true, description = 'Advanced
 
 -- ═══════════════════════════ MECHANIC / RECOVERY ═════════════════════
 item('repairkit', 'Repair Kit', 1500, { useable = true, description = 'Repairs a damaged vehicle on-site' })
-item('repairkit_advanced', 'Advanced Repair Kit', 2500, { useable = true, description = "Field-fixes a vehicle in limp mode — brings the engine back to a driveable state, not a full repair" })
+item('repairkit_advanced', 'Advanced Repair Kit', 2500, { useable = true, image = 'repairkit.png', description = "Field-fixes a vehicle in limp mode — brings the engine back to a driveable state, not a full repair" })
 item('jump_cables', 'Jump Cables', 500, { useable = true, description = 'Jump-starts a dead vehicle battery' })
 item('tow_hook', 'Tow Hook', 800, { description = 'Attaches a vehicle to the recovery truck' })
 
