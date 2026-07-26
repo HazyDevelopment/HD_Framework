@@ -36,12 +36,6 @@ vehicles, economy, admin tools) talks to `HD_Framework` directly.
    from `HD_Framework`, `hd_inventory`, `hd_phone`, `hd_admin`,
    `hd_mechanic`, `hd_housing`, and `hd_clothing`.
 
-**Known limitation:** `uk_policejob` is escrow-encrypted and hardcoded
-to `exports['qb-core']` — it will not run here and is commented out in
-`server.cfg`. `hd_policejob` (`resources/[jobs]/hd_policejob/`) is the
-hand-written replacement, built natively against `HD_Framework`.
-`uk_uhsjob` is plain Lua and needs no such replacement.
-
 ## What's in this folder
 
 ```
