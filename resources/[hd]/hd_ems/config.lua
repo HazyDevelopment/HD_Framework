@@ -377,3 +377,16 @@ Config.Revive = {
     --    have this). Set false to require the specific ace above.
     AllowGenericCommandAce = true,
 }
+
+-- ═══════════════════════════════════════════════════════════════════
+-- PANIC BUTTON
+-- /panic — the radio's emergency button, reachable as a command too.
+-- Raises a top-priority hd_dispatch call visible to BOTH police and
+-- ambulance (see hd_dispatch/config.lua's 'panic' call type) and plays
+-- hd_radio's Panic.ogg for every eligible responder — see
+-- client/panic.lua and server/panic.lua.
+-- ═══════════════════════════════════════════════════════════════════
+Config.Panic = {
+    Command = 'panic',
+    Cooldown = 30, -- seconds between presses per medic, stops spam
+}

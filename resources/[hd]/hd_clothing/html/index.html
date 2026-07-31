@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>HD Clothing</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="root" class="hidden">
+    <div id="clothing">
+        <div class="topBadge">
+            <span id="panelTitle">HD WARDROBE</span>
+            <span class="topBadgeSub" id="panelSub">Free — try anything, save what you like.</span>
+        </div>
+
+        <!-- Left icon rail: one tab per category, Illenium-style -->
+        <div class="sidebar" id="sidebar"></div>
+
+        <!-- Bottom-center control strip for whichever category is selected -->
+        <div class="controlBar" id="controlBar">
+            <div class="controlLabel" id="controlLabel">—</div>
+            <div class="controlRow" id="controlDrawableRow">
+                <button class="ctrlBtn" id="ctrlDrawablePrev">‹</button>
+                <div class="ctrlValue" id="ctrlDrawableValue">0/0</div>
+                <button class="ctrlBtn" id="ctrlDrawableNext">›</button>
+                <button class="ctrlBtn ctrlRemove hidden" id="ctrlRemove" title="Remove">✕</button>
+            </div>
+            <div class="controlRow" id="controlTextureRow">
+                <span class="ctrlSubLabel">Colour</span>
+                <button class="ctrlBtn" id="ctrlTexturePrev">‹</button>
+                <div class="ctrlValue" id="ctrlTextureValue">0/0</div>
+                <button class="ctrlBtn" id="ctrlTextureNext">›</button>
+            </div>
+        </div>
+
+        <!-- Right floating panel: save / outfits, and close -->
+        <div class="panel panel-side">
+            <div class="side-tabs">
+                <button class="side-tab active" data-tab="save">Save</button>
+                <button class="side-tab" data-tab="outfits">My Outfits</button>
+            </div>
+
+            <div class="side-body" id="tabSave">
+                <label class="field-label">Outfit Name</label>
+                <input type="text" class="field-input" id="outfitName" maxlength="60" placeholder="Casual Fit">
+                <button class="wide-btn primary" id="saveBtn">Save Outfit</button>
+                <div class="side-note hidden" id="saveMsg"></div>
+            </div>
+
+            <div class="side-body hidden" id="tabOutfits">
+                <div class="outfit-list" id="outfitList"></div>
+                <div class="empty-state hidden" id="outfitEmpty">No saved outfits yet.</div>
+            </div>
+
+            <button class="wide-btn close-btn" id="closeBtn">Close</button>
+        </div>
+    </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

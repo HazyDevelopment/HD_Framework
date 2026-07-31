@@ -1,0 +1,265 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+    --accent: #9333EA;
+    --accent-soft: rgba(147,51,234,0.2);
+    --text: #EDEDED;
+    --muted: #B8B0C2;
+    --danger: #E27272;
+    --success: #35935B;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    color: var(--text);
+    background: transparent;
+    overflow: hidden;
+    user-select: none;
+}
+
+.hidden { display: none !important; }
+
+/* ═══════════════════════════ SHELL ══════════════════════════════════
+   Same transparent-purple wash as hd_inventory/hd_loadingscreen — the
+   character stays visible behind the UI, this isn't an opaque menu. */
+#root {
+    position: fixed;
+    inset: 0;
+}
+
+#clothing {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, rgba(88,28,135,0.16), rgba(10,4,16,0.4));
+}
+
+.topBadge {
+    position: fixed;
+    top: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+#panelTitle {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    color: var(--text);
+    text-shadow: 0 0 16px rgba(147,51,234,0.5);
+}
+.topBadgeSub { font-size: 11px; color: var(--muted); }
+
+/* ═══════════════════════════ SIDEBAR (category rail) ═════════════════ */
+.sidebar {
+    position: fixed;
+    top: 50%;
+    left: 26px;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px;
+    background: linear-gradient(165deg, rgba(32,16,48,0.88), rgba(12,8,16,0.94));
+    border: 1px solid rgba(147,51,234,0.25);
+    border-radius: 16px;
+    box-shadow: 0 16px 50px rgba(0,0,0,0.5);
+    max-height: 78vh;
+    overflow-y: auto;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-thumb { background: rgba(147,51,234,0.35); border-radius: 3px; }
+
+.sidebar-tab {
+    width: 46px;
+    height: 46px;
+    border-radius: 11px;
+    border: 1px solid transparent;
+    background: rgba(255,255,255,0.04);
+    color: var(--muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+    position: relative;
+}
+.sidebar-tab svg { width: 20px; height: 20px; }
+.sidebar-tab:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+.sidebar-tab.active {
+    background: var(--accent-soft);
+    border-color: rgba(147,51,234,0.55);
+    color: #fff;
+    box-shadow: 0 0 14px rgba(147,51,234,0.35);
+}
+.sidebar-tab .tab-tip {
+    position: absolute;
+    left: 56px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(12,8,16,0.95);
+    border: 1px solid rgba(147,51,234,0.3);
+    padding: 4px 9px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.1s ease;
+}
+.sidebar-tab:hover .tab-tip { opacity: 1; }
+
+/* ═══════════════════════════ CONTROL BAR (bottom-centre) ══════════════ */
+.controlBar {
+    position: fixed;
+    bottom: 26px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 360px;
+    background: linear-gradient(165deg, rgba(32,16,48,0.9), rgba(12,8,16,0.95));
+    border: 1px solid rgba(147,51,234,0.25);
+    border-radius: 14px;
+    padding: 12px 16px 14px;
+    box-shadow: 0 16px 50px rgba(0,0,0,0.5);
+}
+
+.controlLabel {
+    text-align: center;
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text);
+    margin-bottom: 8px;
+}
+
+.controlRow { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.controlRow + .controlRow { margin-top: 8px; }
+.ctrlSubLabel { font-size: 10.5px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-right: 2px; }
+
+.ctrlBtn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    background: rgba(255,255,255,0.06);
+    color: var(--text);
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.12s ease;
+}
+.ctrlBtn:hover { background: var(--accent); color: #fff; }
+.ctrlRemove { background: rgba(226,114,114,0.14); color: var(--danger); font-size: 12px; margin-left: 6px; }
+.ctrlRemove:hover { background: rgba(226,114,114,0.32); color: #fff; }
+
+.ctrlValue {
+    min-width: 100px;
+    text-align: center;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ═══════════════════════════ RIGHT PANEL (save / outfits) ═════════════ */
+.panel-side {
+    position: fixed;
+    top: 50%;
+    right: 26px;
+    transform: translateY(-50%);
+    width: 230px;
+    max-height: 78vh;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px;
+    background: linear-gradient(165deg, rgba(32,16,48,0.9), rgba(12,8,16,0.95));
+    border: 1px solid rgba(147,51,234,0.25);
+    border-radius: 16px;
+    box-shadow: 0 16px 50px rgba(0,0,0,0.5);
+}
+
+.side-tabs { display: flex; gap: 6px; }
+.side-tab {
+    flex: 1;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--muted);
+    padding: 8px;
+    border-radius: 9px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+}
+.side-tab.active { background: var(--accent-soft); border-color: rgba(147,51,234,0.45); color: var(--text); }
+
+.side-body { flex: 1; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+
+.field-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.field-input {
+    width: 100%;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 9px 10px;
+    font-size: 12.5px;
+    font-family: inherit;
+}
+.field-input:focus { outline: none; border-color: var(--accent); }
+
+.side-note { font-size: 11px; text-align: center; padding: 4px 0; }
+.side-note.ok { color: var(--success); }
+.side-note.err { color: var(--danger); }
+
+.outfit-list { display: flex; flex-direction: column; gap: 6px; }
+.outfit-row {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 9px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+.outfit-name { font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.outfit-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.outfit-btn {
+    border: none;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 5px 8px;
+    cursor: pointer;
+    font-family: inherit;
+}
+.outfit-wear { background: var(--accent); color: #fff; }
+.outfit-wear:hover { background: #A855F7; }
+.outfit-del { background: rgba(226,114,114,0.15); color: var(--danger); }
+.outfit-del:hover { background: rgba(226,114,114,0.3); }
+
+.empty-state { text-align: center; color: var(--muted); font-size: 11.5px; padding: 20px 6px; }
+
+.wide-btn {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.14);
+    color: var(--text);
+    padding: 11px;
+    border-radius: 10px;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+}
+.wide-btn:hover { background: rgba(255,255,255,0.13); }
+.wide-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.wide-btn.primary:hover { background: #A855F7; }
+.close-btn { margin-top: auto; }

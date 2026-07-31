@@ -165,6 +165,14 @@ RegisterNetEvent('hd_dispatch:client:newCall', function(call)
     UpsertBlip(call)
     SendNUIMessage({ action = 'newCall', call = call })
     if Config.Sound.Enabled then SendNUIMessage({ action = 'alertSound' }) end
+    -- Panic alerts get the full-screen flashing overlay on top of the
+    -- normal card/blip/toast handling above — see html/js/app.js's
+    -- 'panicAlert' handler. Shown regardless of whether the board is
+    -- currently open, unlike the toast/card which only render live
+    -- while it is.
+    if call.kind == 'panic' then
+        SendNUIMessage({ action = 'panicAlert', call = call })
+    end
 end)
 
 RegisterNetEvent('hd_dispatch:client:updateCall', function(call)

@@ -244,6 +244,20 @@ Config.Detain = {
 }
 
 -- ═══════════════════════════════════════════════════════════════════
+-- PANIC BUTTON
+-- /panic — the radio's emergency button, reachable as a command too
+-- for whoever doesn't have Hold-key muscle memory for it. Raises a
+-- top-priority hd_dispatch call visible to BOTH police and ambulance
+-- (see hd_dispatch/config.lua's 'panic' call type) and plays hd_radio's
+-- Panic.ogg for every eligible responder, same as the radio's own
+-- panic button — see client/panic.lua and server/panic.lua.
+-- ═══════════════════════════════════════════════════════════════════
+Config.Panic = {
+    Command = 'panic',
+    Cooldown = 30, -- seconds between presses per officer, stops spam
+}
+
+-- ═══════════════════════════════════════════════════════════════════
 -- GPS TRACKING
 -- Companion design, mirrors uk_uhsjob/config.lua's own GPS section:
 -- this resource only ever tracks/pushes ITS OWN job ("police"). Reuses

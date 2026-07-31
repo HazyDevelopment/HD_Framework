@@ -20,7 +20,13 @@ html, body { width: 100%; height: 100%; background: transparent; overflow: hidde
 #channelChip.on { display: block; }
 #channelChip.talking { border-color: #D8892B; color: #D8892B; }
 
-/* ══════════════════════════ HANDHELD RADIO ══════════════════════════ */
+/* ══════════════════════════ HANDHELD RADIO ══════════════════════════
+   Modelled on a real TETRA/PMR handheld (Sepura SC20/STP8 body shape):
+   tall, narrow, matte black polymer case, a light small-icon LCD (not
+   a neon "hacker terminal" green screen), rubberised side grips, and a
+   recessed emergency button under a screwed bezel ring — flatter,
+   more mechanical shapes throughout instead of the overly-rounded,
+   glossy "toy" look a first pass tends to produce. */
 #radio {
     position: fixed;
     top: 50%;
@@ -29,7 +35,7 @@ html, body { width: 100%; height: 100%; background: transparent; overflow: hidde
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.15s ease, transform 0.15s ease;
-    filter: drop-shadow(0 20px 45px rgba(0,0,0,0.65));
+    filter: drop-shadow(0 22px 40px rgba(0,0,0,0.7));
 }
 #radio.open {
     opacity: 1;
@@ -39,244 +45,297 @@ html, body { width: 100%; height: 100%; background: transparent; overflow: hidde
 
 .antenna {
     position: absolute;
-    top: -78px;
-    right: 34px;
-    width: 10px;
-    height: 84px;
-    background: linear-gradient(90deg, #0a0a0c, #2b2c30 45%, #0a0a0c);
-    border-radius: 5px 5px 2px 2px;
-    box-shadow: inset -1px 0 2px rgba(255,255,255,0.08);
+    top: -66px;
+    right: 30px;
+    width: 8px;
+    height: 72px;
+    background: linear-gradient(90deg, #060607, #1c1d1f 40%, #2a2b2d 60%, #060607);
+    border-radius: 3px 3px 1px 1px;
+    box-shadow: inset -1px 0 1px rgba(255,255,255,0.06);
+}
+.antenna::before {
+    /* threaded connector base where the antenna screws into the body */
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: -3px;
+    width: 14px;
+    height: 10px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #050506, #2c2d2f 50%, #050506);
 }
 .antenna::after {
     content: '';
     position: absolute;
-    top: -14px;
+    top: -10px;
     left: -3px;
-    width: 16px;
-    height: 18px;
-    border-radius: 8px 8px 6px 6px;
-    background: linear-gradient(180deg, #3a3b40, #131316);
+    width: 14px;
+    height: 13px;
+    border-radius: 7px 7px 3px 3px;
+    background: linear-gradient(180deg, #2c2d2f, #0a0a0b);
 }
 
 .body {
     position: relative;
-    width: 250px;
-    padding: 18px 16px 16px;
-    border-radius: 22px;
-    background: linear-gradient(160deg, #3c3d42 0%, #232428 12%, #1a1b1e 55%, #101113 100%);
-    border: 1px solid rgba(255,255,255,0.06);
+    width: 228px;
+    padding: 20px 15px 16px;
+    border-radius: 15px;
+    background:
+        repeating-linear-gradient(90deg, rgba(255,255,255,0.02) 0 1px, transparent 1px 3px),
+        linear-gradient(160deg, #35363a 0%, #202124 14%, #17181a 55%, #0d0e0f 100%);
+    border: 1px solid rgba(0,0,0,0.6);
     box-shadow:
-        inset 0 1px 1px rgba(255,255,255,0.15),
-        inset 0 -30px 40px rgba(0,0,0,0.35);
+        inset 0 1px 1px rgba(255,255,255,0.12),
+        inset 0 -24px 36px rgba(0,0,0,0.4),
+        inset 6px 0 10px -6px rgba(0,0,0,0.5),
+        inset -6px 0 10px -6px rgba(0,0,0,0.5);
 }
+/* rubberised grip ridges down each side, like the real handheld's case */
+.body::before, .body::after {
+    content: '';
+    position: absolute;
+    top: 90px;
+    bottom: 70px;
+    width: 6px;
+    background: repeating-linear-gradient(180deg, rgba(0,0,0,0.55) 0 2px, rgba(255,255,255,0.03) 2px 4px);
+    border-radius: 3px;
+}
+.body::before { left: 3px; }
+.body::after { right: 3px; }
+
+/* screws at the top corners of the screen bezel — small, functional-
+   looking details a flat "sticker" design never has */
+.screwTL, .screwTR {
+    position: absolute;
+    top: 42px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #6b6c6f, #1a1b1c 70%);
+    box-shadow: 0 0.5px 1px rgba(0,0,0,0.8);
+}
+.screwTL { left: 20px; }
+.screwTR { right: 20px; }
 
 .panicBtn {
     position: absolute;
-    top: 12px;
-    left: 16px;
-    width: 22px;
-    height: 22px;
+    top: 13px;
+    left: 17px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     border: none;
     cursor: pointer;
-    background: radial-gradient(circle at 35% 30%, #ff9d3d, #d8892b 55%, #8a4f10 100%);
-    box-shadow: 0 2px 3px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.5);
+    background: radial-gradient(circle at 35% 28%, #ffb35c, #d8892b 55%, #7a4008 100%);
+    box-shadow:
+        0 0 0 2px #101112,
+        0 0 0 3px rgba(255,255,255,0.08),
+        0 1.5px 2px rgba(0,0,0,0.6),
+        inset 0 1px 1px rgba(255,255,255,0.45);
 }
 .panicBtn:active { filter: brightness(0.85); }
 .panicBtn.flash { animation: panicFlash 0.5s ease-in-out infinite; }
 @keyframes panicFlash {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(224,74,74,0.7), 0 2px 3px rgba(0,0,0,0.5); }
-    50% { box-shadow: 0 0 0 8px rgba(224,74,74,0), 0 2px 3px rgba(0,0,0,0.5); }
+    0%, 100% { box-shadow: 0 0 0 2px #101112, 0 0 0 3px rgba(255,255,255,0.08), 0 0 0 3px rgba(224,74,74,0.7), 0 1.5px 2px rgba(0,0,0,0.6); }
+    50% { box-shadow: 0 0 0 2px #101112, 0 0 0 3px rgba(255,255,255,0.08), 0 0 0 9px rgba(224,74,74,0), 0 1.5px 2px rgba(0,0,0,0.6); }
 }
 
 .speakerGrille {
     position: absolute;
-    top: 14px;
-    right: 16px;
-    display: flex;
-    gap: 3px;
+    top: 13px;
+    right: 15px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2.5px;
 }
 .speakerGrille span {
-    width: 3px;
-    height: 16px;
-    border-radius: 2px;
-    background: linear-gradient(180deg, #050506, #26272b);
+    width: 2.5px;
+    height: 2.5px;
+    border-radius: 50%;
+    background: #050506;
+    box-shadow: inset 0 0.5px 0.5px rgba(0,0,0,0.8);
 }
+.speakerGrille span:nth-child(4n) { margin-right: 0; }
 
+/* ── Screen: a small colour TFT, muted/off like a real unit at rest —
+   pale grey-green panel, dark UI chrome, not a glowing terminal ── */
 .screen {
-    margin-top: 26px;
-    background: linear-gradient(175deg, #16241a, #0a130d);
-    border: 1px solid rgba(159, 227, 159, 0.18);
-    border-radius: 8px;
-    padding: 10px 12px 8px;
-    box-shadow: inset 0 2px 6px rgba(0,0,0,0.6);
+    margin-top: 24px;
+    background: linear-gradient(175deg, #cdd6cd, #b9c2b8);
+    border: 3px solid #08090a;
+    border-radius: 4px;
+    padding: 8px 9px 7px;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.35), 0 1px 0 rgba(255,255,255,0.04);
 }
 
 .statusRow {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    color: #7FD87F;
-    font-size: 10px;
+    color: #2b2f2e;
+    font-size: 9px;
     font-weight: 700;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
 }
-.statusIcons { display: flex; align-items: center; gap: 5px; }
-.bars, .batt { width: 15px; height: 11px; fill: #7FD87F; }
-.batt { width: 20px; }
-#battFill { fill: #7FD87F; }
+.statusIcons { display: flex; align-items: center; gap: 4px; }
+.bars, .batt { width: 13px; height: 10px; fill: #2b2f2e; }
+.batt { width: 18px; }
+#battFill { fill: #2b2f2e; }
 
 .freqRow {
     text-align: center;
-    margin: 8px 0 4px;
+    margin: 5px 0 2px;
 }
 #freqDigits {
-    color: #B6FFB6;
-    font-size: 32px;
+    color: #14201a;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 26px;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
-    letter-spacing: 0.04em;
-    text-shadow: 0 0 10px rgba(182, 255, 182, 0.45);
+    letter-spacing: 0.03em;
 }
 .freqRow .unit {
-    color: rgba(182,255,182,0.55);
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    margin-left: 4px;
+    color: rgba(20,32,26,0.6);
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    margin-left: 3px;
 }
 
 .metaRow {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 10px;
-    color: rgba(182,255,182,0.7);
-    letter-spacing: 0.04em;
+    font-size: 9px;
+    color: rgba(20,32,26,0.75);
+    letter-spacing: 0.03em;
+    border-top: 1px solid rgba(20,32,26,0.18);
+    margin-top: 4px;
+    padding-top: 3px;
 }
 .powerState {
     font-weight: 700;
-    padding: 1px 6px;
-    border-radius: 4px;
+    padding: 1px 5px;
+    border-radius: 3px;
 }
-.powerState.off { background: rgba(224,90,90,0.18); color: #E05A5A; }
-.powerState.on { background: rgba(127,216,127,0.18); color: #7FD87F; }
+.powerState.off { background: rgba(160,40,40,0.16); color: #7a1f1f; }
+.powerState.on { background: rgba(30,110,50,0.16); color: #1c5c33; }
 
 .volRow {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-top: 12px;
+    margin-top: 11px;
     padding: 0 2px;
 }
 .volLabel {
-    color: rgba(237,237,237,0.55);
-    font-size: 10px;
+    color: rgba(237,237,237,0.5);
+    font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.08em;
 }
 #volSlider {
     flex: 1;
-    accent-color: #4A9EFF;
+    accent-color: #8a8d92;
     cursor: pointer;
 }
 #volValue {
-    color: #EDEDED;
-    font-size: 11px;
+    color: #b8bcc2;
+    font-size: 10px;
     font-variant-numeric: tabular-nums;
-    width: 26px;
+    width: 24px;
     text-align: right;
 }
 
 .softkeys {
     display: flex;
-    gap: 6px;
-    margin-top: 12px;
+    gap: 5px;
+    margin-top: 11px;
 }
 .softkey {
     flex: 1;
     border: none;
-    border-radius: 7px;
-    padding: 7px 0;
-    font-size: 11px;
+    border-radius: 4px;
+    padding: 6px 0;
+    font-size: 10px;
     font-weight: 700;
-    letter-spacing: 0.05em;
-    color: #EDEDED;
-    background: linear-gradient(180deg, #2c2d31, #1b1c1f);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 1px 2px rgba(0,0,0,0.4);
+    letter-spacing: 0.04em;
+    color: #c7c9cc;
+    background: linear-gradient(180deg, #232426, #131415);
+    box-shadow: 0 0 0 1px #050506, inset 0 1px 0 rgba(255,255,255,0.06), 0 1px 1px rgba(0,0,0,0.5);
     cursor: pointer;
 }
-.softkey:active { filter: brightness(0.85); }
-.powerKey { color: #7FD87F; font-size: 14px; }
+.softkey:active { filter: brightness(0.8); }
+.powerKey { color: #6fbf8a; font-size: 13px; }
 
 .dpad {
     position: relative;
-    width: 110px;
-    height: 110px;
-    margin: 14px auto 0;
+    width: 104px;
+    height: 104px;
+    margin: 13px auto 0;
 }
 .dpadBtn {
     position: absolute;
     border: none;
     cursor: pointer;
-    color: #C9C9CC;
-    background: linear-gradient(180deg, #2c2d31, #1b1c1f);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 1px 2px rgba(0,0,0,0.4);
-    font-size: 11px;
+    color: #9a9da1;
+    background: linear-gradient(180deg, #26272a, #151617);
+    box-shadow: 0 0 0 1px #050506, inset 0 1px 0 rgba(255,255,255,0.06), 0 1px 1px rgba(0,0,0,0.5);
+    font-size: 10px;
 }
-.dpadBtn:active { filter: brightness(0.85); }
-.dpadUp { top: 0; left: 35px; width: 40px; height: 32px; border-radius: 8px 8px 3px 3px; }
-.dpadDown { bottom: 0; left: 35px; width: 40px; height: 32px; border-radius: 3px 3px 8px 8px; }
-.dpadLeft { left: 0; top: 39px; width: 32px; height: 32px; border-radius: 8px 3px 3px 8px; }
-.dpadRight { right: 0; top: 39px; width: 32px; height: 32px; border-radius: 3px 8px 8px 3px; }
+.dpadBtn:active { filter: brightness(0.8); }
+.dpadUp { top: 0; left: 32px; width: 40px; height: 30px; border-radius: 6px 6px 2px 2px; }
+.dpadDown { bottom: 0; left: 32px; width: 40px; height: 30px; border-radius: 2px 2px 6px 6px; }
+.dpadLeft { left: 0; top: 37px; width: 30px; height: 30px; border-radius: 6px 2px 2px 6px; }
+.dpadRight { right: 0; top: 37px; width: 30px; height: 30px; border-radius: 2px 6px 6px 2px; }
 .dpadCenter {
-    top: 33px; left: 33px; width: 44px; height: 44px; border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #3a3b40, #101113 80%);
-    color: #7FD87F;
+    top: 30px; left: 30px; width: 44px; height: 44px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 28%, #303134, #0c0d0e 75%);
+    color: #6fbf8a;
     font-weight: 700;
-    font-size: 12px;
-    box-shadow: inset 0 1px 1px rgba(255,255,255,0.15), 0 2px 4px rgba(0,0,0,0.5);
+    font-size: 11px;
+    box-shadow: 0 0 0 2px #050506, inset 0 1px 1px rgba(255,255,255,0.12), 0 2px 3px rgba(0,0,0,0.55);
 }
 
 .keypad {
-    margin-top: 14px;
+    margin-top: 13px;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 7px;
+    gap: 6px;
 }
 .key {
     border: none;
-    border-radius: 8px;
-    padding: 9px 0;
-    font-size: 14px;
+    border-radius: 6px;
+    padding: 8px 0;
+    font-size: 13px;
     font-weight: 700;
-    color: #EDEDED;
-    background: linear-gradient(180deg, #303136, #1c1d20);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 1px 2px rgba(0,0,0,0.4);
+    color: #d5d6d9;
+    background: linear-gradient(180deg, #29292c, #161718);
+    box-shadow: 0 0 0 1px #050506, inset 0 1px 0 rgba(255,255,255,0.07), 0 1px 1px rgba(0,0,0,0.5);
     cursor: pointer;
 }
-.key:active { filter: brightness(0.8); }
+.key:active { filter: brightness(0.78); }
 
 .callRow {
     display: flex;
     justify-content: space-between;
-    margin-top: 14px;
-    padding: 0 6px;
+    margin-top: 13px;
+    padding: 0 8px;
 }
 .callBtn {
-    width: 46px;
-    height: 46px;
+    width: 42px;
+    height: 42px;
     border-radius: 50%;
     border: none;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.25);
+    box-shadow: 0 0 0 2px #101112, 0 1.5px 3px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.2);
 }
 .callBtn:active { filter: brightness(0.85); }
-.callBtn svg { width: 20px; height: 20px; fill: #0a0a0a; }
-.callGreen { background: radial-gradient(circle at 35% 30%, #6FE38A, #2E9E4F 80%); }
-.callRed { background: radial-gradient(circle at 35% 30%, #F08080, #C23B3B 80%); }
+.callBtn svg { width: 18px; height: 18px; fill: #0a0a0a; }
+.callGreen { background: radial-gradient(circle at 35% 28%, #5fcf7f, #237d3e 80%); }
+.callRed { background: radial-gradient(circle at 35% 28%, #e46f6f, #a52f2f 80%); }
 .callBtn.ring { animation: ringPulse 0.6s ease-in-out infinite; }
 @keyframes ringPulse {
     0%, 100% { transform: scale(1); }
@@ -285,9 +344,9 @@ html, body { width: 100%; height: 100%; background: transparent; overflow: hidde
 
 .brand {
     text-align: center;
-    margin-top: 14px;
-    color: rgba(237,237,237,0.3);
-    font-size: 10px;
+    margin-top: 13px;
+    color: rgba(237,237,237,0.28);
+    font-size: 9px;
     font-weight: 700;
-    letter-spacing: 0.18em;
+    letter-spacing: 0.16em;
 }
