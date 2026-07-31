@@ -57,6 +57,23 @@ function GenerateCitizenId()
     return id
 end
 
+-- UK mobile format: '07' + 9 digits = 11 digits total. Checked against
+-- every existing character's charinfo.phone (not just other citizens
+-- on the same license) and retried on collision, same repeat/until
+-- pattern as GenerateCitizenId above — this is what actually
+-- guarantees no two players ever end up with the same number, not
+-- just a "probably fine" random roll.
+function GenerateUKPhoneNumber()
+    local number
+    repeat
+        number = '07' .. tostring(math.random(100000000, 999999999))
+        local exists = MySQL.scalar.await(
+            "SELECT 1 FROM players WHERE JSON_UNQUOTE(JSON_EXTRACT(charinfo, '$.phone')) = ?", { number }
+        )
+    until not exists
+    return number
+end
+
 -- Turns a `players` row into the same in-memory shape CreatePlayerObject
 -- expects — used by server/characters.lua on both select and create.
 function RowToPlayerData(row, license)
@@ -146,8 +163,8 @@ end
 
 -- ═══════════════════════════ CALLBACKS ═══════════════════════════════
 -- Standard QBCore.Functions.CreateCallback/TriggerCallback pattern —
--- a real gap this had until a live boot test against uk_uhsjob (a
--- genuine QBCore-ecosystem resource) surfaced it: its bridge calls
+-- a real gap this had until a live boot test against hd_ems (a
+-- genuine QBCore-ecosystem-shaped resource) surfaced it: its bridge calls
 -- Framework.Functions.CreateCallback expecting it to exist like every
 -- other Functions.* method. Event names match real QBCore's own
 -- convention exactly, so any off-the-shelf QBCore resource using this
