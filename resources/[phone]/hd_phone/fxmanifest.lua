@@ -4,8 +4,8 @@ lua54 'yes'
 
 name 'hd_phone'
 author 'Hazy Development'
-description 'HD Framework — iPhone-style smartphone with a built-in App Store: Contacts, Messages, Calls, FaceTime, AirDrop, Wire, Picta, Loopz, Garages, Bank, Mail, Marketplace, Notes, Crypto, Gallery, Settings'
-version '1.3.0'
+description 'HD Phone — custom smartphone NUI'
+version '1.0.0'
 
 shared_scripts {
     'config.lua'
@@ -19,21 +19,25 @@ client_scripts {
 server_scripts {
     '@oxmysql/lib/MySQL.lua',
     'server/main.lua',
+    'server/onboarding.lua',
+    'server/appstore.lua',
     'server/contacts.lua',
     'server/messages.lua',
     'server/calls.lua',
+    'server/gallery.lua',
+    'server/airdrop.lua',
     'server/social.lua',
-    'server/garages.lua',
     'server/bank.lua',
     'server/mail.lua',
     'server/marketplace.lua',
     'server/notes.lua',
     'server/crypto.lua',
-    'server/gallery.lua',
-    'server/settings.lua',
-    'server/appstore.lua',
-    'server/airdrop.lua',
-    'server/facetime.lua'
+    'server/dating.lua',
+    'server/darkchat.lua',
+    'server/voicememo.lua',
+    'server/garages.lua',
+    'server/facetime.lua',
+    'server/music.lua'
 }
 
 ui_page 'html/index.html'
@@ -41,14 +45,10 @@ ui_page 'html/index.html'
 files {
     'html/index.html',
     'html/css/style.css',
-    'html/js/app.js'
-}
-
--- SendMail(citizenid, senderLabel, subject, body) — for other resources
--- to drop a system mail into someone's inbox (a future admin broadcast,
--- a marketplace-sale receipt, etc.). Bank already uses it internally.
-server_exports {
-    'SendMail'
+    'html/js/app.js',
+    'html/js/apps/*.js',
+    'html/images/*.png',
+    'html/images/*.svg'
 }
 
 escrow_ignore {

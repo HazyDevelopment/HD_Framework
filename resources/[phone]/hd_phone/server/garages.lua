@@ -1,10 +1,26 @@
 -- ═══════════════════════════════════════════════════════════════════
 --  HD PHONE | GARAGES
---  Store/retrieve is gated server-side on: the vehicle actually
---  belonging to this citizenid, its current state matching what's
---  being requested, and the player's ped being within the garage's
---  radius — never trust the client's word alone on any of these.
+--  Reads/writes the `player_vehicles` table HD_Framework already
+--  created — no new table needed here. Store/retrieve state and
+--  health are re-validated server-side, the client only ever suggests
+--  which plate and which garage.
 -- ═══════════════════════════════════════════════════════════════════
+
+function TrimPlate(p) return (p or ''):gsub('%s+$', ''):gsub('^%s+', '') end
+
+local function SendVehicles(src, citizenid)
+    local rows = MySQL.query.await('SELECT plate, vehicle, garage, state, engine, body FROM player_vehicles WHERE citizenid = ?', {
+        citizenid
+    }) or {}
+    TriggerClientEvent('hd_phone:client:vehicles', src, rows)
+end
+
+RegisterNetEvent('hd_phone:server:getVehicles', function()
+    local src = source
+    local Player = GetPlayerOrNil(src)
+    if not Player then return end
+    SendVehicles(src, Player.PlayerData.citizenid)
+end)
 
 local function FindGarage(key)
     for _, g in ipairs(Config.Garages) do
@@ -13,83 +29,46 @@ local function FindGarage(key)
     return nil
 end
 
-local function PlayerNearGarage(src, garage)
-    local ped = GetPlayerPed(src)
-    if not ped or ped == 0 then return false end
-    local coords = GetEntityCoords(ped)
-    return #(coords - garage.coords) <= garage.radius
-end
-
-RegisterNetEvent('hd_phone:server:getVehicles', function()
+-- Client already confirmed it's inside the vehicle and reported live
+-- health — this just re-validates ownership before persisting.
+RegisterNetEvent('hd_phone:server:storeVehicle', function(plate, garageKey, engineHealth, bodyHealth)
     local src = source
-    local Player = Framework.Functions.GetPlayer(src)
-    if not Player then return end
+    local Player = GetPlayerOrNil(src)
+    local garage = FindGarage(garageKey)
+    if not Player or not garage then return end
+    plate = TrimPlate(plate or '')
 
-    local rows = MySQL.query.await(
-        'SELECT plate, vehicle, garage, state, fuel, engine, body FROM player_vehicles WHERE citizenid = ? ORDER BY vehicle ASC',
-        { Player.PlayerData.citizenid }
-    ) or {}
-    TriggerClientEvent('hd_phone:client:vehicles', src, rows)
+    local owned = MySQL.scalar.await('SELECT 1 FROM player_vehicles WHERE plate = ? AND citizenid = ?', { plate, Player.PlayerData.citizenid })
+    if not owned then return end
+
+    engineHealth = math.max(0, math.min(1000, tonumber(engineHealth) or 1000))
+    bodyHealth = math.max(0, math.min(1000, tonumber(bodyHealth) or 1000))
+    MySQL.update('UPDATE player_vehicles SET garage = ?, state = 1, engine = ?, body = ? WHERE plate = ?', {
+        garageKey, engineHealth, bodyHealth, plate
+    })
+    TriggerClientEvent('hd_phone:client:vehicleStored', src, plate)
+    Notify(src, 'Vehicle stored.', 'success')
+    SendVehicles(src, Player.PlayerData.citizenid)
 end)
 
-RegisterNetEvent('hd_phone:server:storeVehicle', function(data)
+RegisterNetEvent('hd_phone:server:retrieveVehicle', function(plate, garageKey)
     local src = source
-    local Player = Framework.Functions.GetPlayer(src)
-    if not Player or type(data) ~= 'table' then return end
+    local Player = GetPlayerOrNil(src)
+    local garage = FindGarage(garageKey)
+    if not Player or not garage then return end
+    plate = TrimPlate(plate or '')
 
-    local garage = FindGarage(data.garageKey)
-    if not garage or not PlayerNearGarage(src, garage) then
-        TriggerClientEvent('HD:Client:Notify', src, 'You need to be at the garage to store a vehicle.', 'error')
+    local row = MySQL.single.await('SELECT * FROM player_vehicles WHERE plate = ? AND citizenid = ?', { plate, Player.PlayerData.citizenid })
+    if not row then return end
+    if row.state ~= 1 or row.garage ~= garageKey then
+        Notify(src, "That vehicle isn't in this garage.", 'error')
         return
     end
 
-    local row = MySQL.single.await('SELECT plate, state FROM player_vehicles WHERE plate = ? AND citizenid = ?', {
-        data.plate, Player.PlayerData.citizenid
+    MySQL.update('UPDATE player_vehicles SET state = 0 WHERE plate = ?', { plate })
+    TriggerClientEvent('hd_phone:client:vehicleRetrieved', src, {
+        plate = plate, model = row.vehicle, engine = row.engine, body = row.body,
+        coords = garage.coords,
     })
-    if not row or row.state == 1 then
-        TriggerClientEvent('HD:Client:Notify', src, "That vehicle isn't yours or is already stored.", 'error')
-        return
-    end
-
-    -- Client-reported, so clamp to the native's real 0-1000 range before
-    -- persisting — this is what actually makes hd_mechanic's repairs
-    -- (or any crash damage) stick across a store/retrieve cycle; before
-    -- this, store never wrote live health back, so a car always came
-    -- back at whatever `engine`/`body` was last written (usually still
-    -- 1000 from the original purchase insert, forever).
-    local engine = math.max(0, math.min(1000, tonumber(data.engine) or 1000))
-    local body = math.max(0, math.min(1000, tonumber(data.body) or 1000))
-
-    MySQL.update('UPDATE player_vehicles SET state = 1, garage = ?, engine = ?, body = ? WHERE plate = ?', {
-        garage.key, engine, body, data.plate
-    })
-    TriggerClientEvent('hd_phone:client:despawnVehicle', src, data.netId)
-    TriggerClientEvent('HD:Client:Notify', src, ('%s stored at %s.'):format(data.plate, garage.label), 'success')
-end)
-
-RegisterNetEvent('hd_phone:server:retrieveVehicle', function(data)
-    local src = source
-    local Player = Framework.Functions.GetPlayer(src)
-    if not Player or type(data) ~= 'table' then return end
-
-    local garage = FindGarage(data.garageKey)
-    if not garage or not PlayerNearGarage(src, garage) then
-        TriggerClientEvent('HD:Client:Notify', src, 'You need to be at the garage to retrieve a vehicle.', 'error')
-        return
-    end
-
-    local row = MySQL.single.await(
-        'SELECT plate, vehicle, garage, state, fuel, engine, body FROM player_vehicles WHERE plate = ? AND citizenid = ?',
-        { data.plate, Player.PlayerData.citizenid }
-    )
-    if not row or row.state == 0 or row.garage ~= garage.key then
-        TriggerClientEvent('HD:Client:Notify', src, "That vehicle isn't stored at this garage.", 'error')
-        return
-    end
-
-    MySQL.update('UPDATE player_vehicles SET state = 0 WHERE plate = ?', { row.plate })
-    TriggerClientEvent('hd_phone:client:spawnVehicle', src, {
-        plate = row.plate, model = row.vehicle, spawn = garage.spawn,
-        fuel = row.fuel, engine = row.engine, body = row.body,
-    })
+    SendVehicles(src, Player.PlayerData.citizenid)
 end)

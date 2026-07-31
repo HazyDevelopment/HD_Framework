@@ -1,97 +1,93 @@
 -- ═══════════════════════════════════════════════════════════════════
 --  HD PHONE | FACETIME
---  Ring/answer/decline/hangup mirrors server/calls.lua exactly, but
---  this app carries real camera+mic over WebRTC instead of pma-voice —
---  this file is purely a signaling relay (SDP offer/answer + ICE
---  candidates) between the two clients' own RTCPeerConnections. The
---  actual media never touches the server.
+--  Real two-way video/audio, peer-to-peer over WebRTC — this file is a
+--  pure signalling relay (SDP offer/answer + ICE candidates) between
+--  the two players' own RTCPeerConnections; media itself never
+--  touches the server. Uses a public STUN server for NAT traversal —
+--  there's no TURN fallback, so two very restrictive NATs could fail
+--  to connect even though the ring/answer handshake succeeds.
 -- ═══════════════════════════════════════════════════════════════════
 
-local ActiveFacetimes = {}
-local nextFacetimeId = 1
+local ActiveFacetimes = {} -- callId -> { caller, callee }
+local SourceFacetime = {}
 
-local function EndFacetimeInternal(id, reason)
-    local call = ActiveFacetimes[id]
-    if not call then return end
-    ActiveFacetimes[id] = nil
-    TriggerClientEvent('hd_phone:client:facetimeEnded', call.callerSrc, id, reason)
-    if call.targetSrc then
-        TriggerClientEvent('hd_phone:client:facetimeEnded', call.targetSrc, id, reason)
+local function GetSourceByPhone(number)
+    for _, srcStr in ipairs(GetPlayers()) do
+        local candidate = tonumber(srcStr)
+        local Player = GetPlayerOrNil(candidate)
+        if Player and Player.PlayerData.charinfo.phone == number then return candidate end
     end
+    return nil
 end
 
-RegisterNetEvent('hd_phone:server:facetimeStart', function(toNumber)
+local function EndFacetime(callId, reason)
+    local call = ActiveFacetimes[callId]
+    if not call then return end
+    ActiveFacetimes[callId] = nil
+    SourceFacetime[call.caller] = nil
+    if call.callee then SourceFacetime[call.callee] = nil end
+    TriggerClientEvent('hd_phone:client:facetimeEnded', call.caller, reason)
+    if call.callee then TriggerClientEvent('hd_phone:client:facetimeEnded', call.callee, reason) end
+end
+
+RegisterNetEvent('hd_phone:server:startFacetime', function(toNumber)
     local src = source
-    local myNumber = GetPhoneNumber(src)
-    if not myNumber or type(toNumber) ~= 'string' or toNumber == myNumber then return end
+    local Player = GetPlayerOrNil(src)
+    if not Player or type(toNumber) ~= 'string' then return end
+    if SourceFacetime[src] then return end
 
     local targetSrc = GetSourceByPhone(toNumber)
-    if not targetSrc then
-        TriggerClientEvent('hd_phone:client:facetimeFailed', src, 'Number unreachable.')
+    if not targetSrc or SourceFacetime[targetSrc] then
+        TriggerClientEvent('hd_phone:client:facetimeEnded', src, 'unavailable')
         return
     end
 
-    local id = nextFacetimeId
-    nextFacetimeId = nextFacetimeId + 1
-    ActiveFacetimes[id] = { id = id, callerSrc = src, targetSrc = targetSrc, status = 'ringing' }
+    local callId = ('ft-%s-%s-%s'):format(src, targetSrc, os.time())
+    ActiveFacetimes[callId] = { caller = src, callee = targetSrc }
+    SourceFacetime[src] = callId
+    SourceFacetime[targetSrc] = callId
 
-    local displayNumber = HasNoCallerId(src) and 'Unknown' or myNumber
-    TriggerClientEvent('hd_phone:client:facetimeRinging', src, id, toNumber)
-    TriggerClientEvent('hd_phone:client:facetimeIncoming', targetSrc, id, displayNumber, GetDisplayName(src))
-
-    CreateThread(function()
-        Wait(Config.Calls.RingTimeoutSeconds * 1000)
-        local call = ActiveFacetimes[id]
-        if call and call.status == 'ringing' then
-            EndFacetimeInternal(id, 'no-answer')
-        end
-    end)
+    local callerName = ('%s %s'):format(Player.PlayerData.charinfo.firstname or '', Player.PlayerData.charinfo.lastname or '')
+    TriggerClientEvent('hd_phone:client:incomingFacetime', targetSrc, { callId = callId, name = callerName, number = Player.PlayerData.charinfo.phone })
+    TriggerClientEvent('hd_phone:client:ring', targetSrc)
+    TriggerClientEvent('hd_phone:client:facetimeRinging', src, { callId = callId })
 end)
 
-RegisterNetEvent('hd_phone:server:facetimeAnswer', function(id)
+RegisterNetEvent('hd_phone:server:acceptFacetime', function(callId)
     local src = source
-    local call = ActiveFacetimes[id]
-    if not call or call.targetSrc ~= src or call.status ~= 'ringing' then return end
-
-    call.status = 'active'
-    TriggerClientEvent('hd_phone:client:facetimeAnswered', call.callerSrc, id, true)  -- true = you're the offerer
-    TriggerClientEvent('hd_phone:client:facetimeAnswered', call.targetSrc, id, false)
+    local call = ActiveFacetimes[callId]
+    if not call or call.callee ~= src then return end
+    TriggerClientEvent('hd_phone:client:stopRing', call.caller)
+    TriggerClientEvent('hd_phone:client:stopRing', call.callee)
+    -- Caller creates the offer once it knows the callee is ready.
+    TriggerClientEvent('hd_phone:client:facetimeAccepted', call.caller, callId)
+    TriggerClientEvent('hd_phone:client:facetimeAccepted', call.callee, callId)
 end)
 
-RegisterNetEvent('hd_phone:server:facetimeDecline', function(id)
-    local src = source
-    local call = ActiveFacetimes[id]
-    if not call or (src ~= call.callerSrc and src ~= call.targetSrc) then return end
-    EndFacetimeInternal(id, 'declined')
+RegisterNetEvent('hd_phone:server:declineFacetime', function(callId)
+    EndFacetime(callId, 'declined')
 end)
 
-RegisterNetEvent('hd_phone:server:facetimeEnd', function(id)
-    local src = source
-    local call = ActiveFacetimes[id]
-    if not call or (src ~= call.callerSrc and src ~= call.targetSrc) then return end
-    EndFacetimeInternal(id, 'ended')
+RegisterNetEvent('hd_phone:server:endFacetime', function(callId)
+    EndFacetime(callId, 'ended')
 end)
 
--- Relay only — sender must be a party to that exact call id, and the
--- payload is forwarded untouched to whichever side didn't send it.
-RegisterNetEvent('hd_phone:server:facetimeSignal', function(data)
-    local src = source
-    if type(data) ~= 'table' or not data.id or data.signal == nil then return end
-    local call = ActiveFacetimes[data.id]
-    if not call then return end
+-- ═══════════════════════════ SIGNALLING RELAY ════════════════════════
+local function OtherParty(callId, src)
+    local call = ActiveFacetimes[callId]
+    if not call then return nil end
+    return call.caller == src and call.callee or call.caller
+end
 
-    if src == call.callerSrc then
-        TriggerClientEvent('hd_phone:client:facetimeSignal', call.targetSrc, data.id, data.signal)
-    elseif src == call.targetSrc then
-        TriggerClientEvent('hd_phone:client:facetimeSignal', call.callerSrc, data.id, data.signal)
-    end
+RegisterNetEvent('hd_phone:server:facetimeSignal', function(callId, kind, payload)
+    local src = source
+    local other = OtherParty(callId, src)
+    if not other then return end
+    TriggerClientEvent('hd_phone:client:facetimeSignal', other, kind, payload)
 end)
 
 AddEventHandler('playerDropped', function()
     local src = source
-    for id, call in pairs(ActiveFacetimes) do
-        if call.callerSrc == src or call.targetSrc == src then
-            EndFacetimeInternal(id, 'disconnected')
-        end
-    end
+    local callId = SourceFacetime[src]
+    if callId then EndFacetime(callId, 'disconnected') end
 end)

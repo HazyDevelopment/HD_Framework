@@ -1,1318 +1,619 @@
+// ═══════════════════════════════════════════════════════════════════
+//  HD PHONE | CORE OS
+//  Boot → onboarding → lock screen → home screen. Everything an app
+//  needs (post(), icon(), openApp(), toast(), state) is exposed on
+//  `window.HD` so html/js/apps/*.js can stay small and focused.
+// ═══════════════════════════════════════════════════════════════════
+
 (function () {
     'use strict';
 
     const resourceName = (typeof GetParentResourceName === 'function') ? GetParentResourceName() : 'hd_phone';
+    const $app = document.getElementById('app');
+    const $screens = document.getElementById('screens');
+    const $root = document.documentElement;
 
-    // ═══════════════════════════ STATE ═══════════════════════════════
-    let myNumber = null;
-    let garagesCfg = [];
-    let socialAppsCfg = {};
-    let screen = 'home';
-    let contacts = [];
-    let currentConvNumber = null;
-    let currentConvName = null;
-    let activeCall = null; // { id, number, name, direction: 'incoming'|'outgoing', status: 'ringing'|'active', startTs }
-    let callTimer = null;
-    let currentFeedApp = null;
-    let feeds = { wire: [], picta: [], loopz: [] };
-    let vehicles = [];
-    let installedApps = new Set();
-
-    const $ = (id) => document.getElementById(id);
-    const screenParent = {
-        home: null, contacts: 'home', dialer: 'home', messages: 'home', conversation: 'messages',
-        feed: 'home', garages: 'home', incall: null, appstore: 'home', airdrop: 'home',
-        facetime: 'home', 'facetime-incall': null,
-        bank: 'home', mail: 'home', marketplace: 'home', notes: 'home', crypto: 'home', gallery: 'home', settings: 'home',
-    };
-
-    function post(action, data) {
-        fetch(`https://${resourceName}/${action}`, {
+    function post(name, data) {
+        return fetch(`https://${resourceName}/${name}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json; charset=UTF-8' },
             body: JSON.stringify(data || {}),
-        }).catch(() => {});
+        }).then((r) => r.json()).catch(() => ({}));
     }
 
-    function escapeHtml(str) {
-        const d = document.createElement('div');
-        d.textContent = str == null ? '' : String(str);
-        return d.innerHTML;
+    function toast(msg) {
+        const el = document.getElementById('toast');
+        el.textContent = msg;
+        el.classList.remove('hidden');
+        clearTimeout(toast._t);
+        toast._t = setTimeout(() => el.classList.add('hidden'), 2200);
     }
 
-    function timeAgo(unixSeconds) {
-        const diff = Math.max(0, Math.floor(Date.now() / 1000) - unixSeconds);
-        if (diff < 60) return `${diff}s`;
-        if (diff < 3600) return `${Math.floor(diff / 60)}m`;
-        if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
-        return `${Math.floor(diff / 86400)}d`;
+    // ═══════════════════════════ ICON LIBRARY ════════════════════════
+    // Every icon is a gradient-filled rounded-square tile + a simple
+    // geometric glyph — same visual family as real iOS app icons
+    // (flat glyph, soft highlight, drop shadow from .app-icon in CSS),
+    // not a hand-drawn sticker.
+    const GRADIENTS = {
+        phone: ['#34d399', '#059669'], messages: ['#34d399', '#0ea5a3'], contacts: ['#94a3b8', '#475569'],
+        settings: ['#9ca3af', '#4b5563'], camera: ['#374151', '#111827'], photos: ['#f472b6', '#a855f7', '#3b82f6'],
+        facetime: ['#34d399', '#059669'], wire: ['#38bdf8', '#0ea5e9'], picta: ['#f472b6', '#a855f7', '#f59e0b'],
+        loopz: ['#111827', '#ef4444'], matchup: ['#fb7185', '#e11d48'], darkchat: ['#4b5563', '#111827'],
+        bank: ['#22c55e', '#15803d'], crypto: ['#f59e0b', '#b45309'], marketplace: ['#fb923c', '#ea580c'],
+        mail: ['#60a5fa', '#2563eb'], notes: ['#fde68a', '#f3e8b0'], clock: ['#1f2937', '#111827'],
+        maps: ['#4ade80', '#16a34a'], music: ['#fb7185', '#be123c'], voicememo: ['#f43f5e', '#7f1d1d'],
+        garages: ['#818cf8', '#4338ca'], appstore: ['#38bdf8', '#1d4ed8'],
+    };
+    const GLYPHS = {
+        phone: '<path d="M8 4c-1 0-2 .9-2 2 0 8 6 14 14 14 1.1 0 2-.9 2-2v-2.6c0-.5-.3-.9-.8-1L17 13.4c-.4-.1-.9 0-1.1.4l-1 1.4c-2-1-3.6-2.6-4.6-4.6l1.4-1c.4-.3.5-.7.4-1.1L10.6 4.8c-.1-.5-.5-.8-1-.8H8Z" fill="#fff"/>',
+        messages: '<path d="M6 6h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H12l-5 4v-4H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z" fill="#fff"/>',
+        contacts: '<circle cx="16" cy="12" r="4.2" fill="#fff"/><path d="M8 25c0-4.4 3.6-7 8-7s8 2.6 8 7Z" fill="#fff"/>',
+        settings: '<path d="M16 11a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm10.4 3.4-1.8-.3a8.8 8.8 0 0 0-.9-2.1l1.1-1.5a1 1 0 0 0-.1-1.3l-1.7-1.7a1 1 0 0 0-1.3-.1l-1.5 1.1a8.8 8.8 0 0 0-2.1-.9l-.3-1.8a1 1 0 0 0-1-.8h-2.4a1 1 0 0 0-1 .8l-.3 1.8a8.8 8.8 0 0 0-2.1.9L8.8 7.4a1 1 0 0 0-1.3.1L5.8 9.2a1 1 0 0 0-.1 1.3l1.1 1.5a8.8 8.8 0 0 0-.9 2.1l-1.8.3a1 1 0 0 0-.8 1v2.4a1 1 0 0 0 .8 1l1.8.3a8.8 8.8 0 0 0 .9 2.1l-1.1 1.5a1 1 0 0 0 .1 1.3l1.7 1.7a1 1 0 0 0 1.3.1l1.5-1.1a8.8 8.8 0 0 0 2.1.9l.3 1.8a1 1 0 0 0 1 .8h2.4a1 1 0 0 0 1-.8l.3-1.8a8.8 8.8 0 0 0 2.1-.9l1.5 1.1a1 1 0 0 0 1.3-.1l1.7-1.7a1 1 0 0 0 .1-1.3l-1.1-1.5a8.8 8.8 0 0 0 .9-2.1l1.8-.3a1 1 0 0 0 .8-1v-2.4a1 1 0 0 0-.8-1Z" fill="#fff" opacity="0"/><circle cx="16" cy="16" r="5.2" fill="#fff"/>',
+        camera: '<rect x="5" y="10" width="22" height="15" rx="3" fill="#fff"/><circle cx="16" cy="17.5" r="5" fill="#374151"/><rect x="12" y="6" width="8" height="4" rx="1.5" fill="#fff"/>',
+        photos: '<circle cx="13" cy="13" r="6" fill="#fff"/><circle cx="20" cy="20" r="7" fill="#fff" opacity="0.85"/>',
+        facetime: '<rect x="5" y="9" width="16" height="14" rx="3" fill="#fff"/><path d="M23 14.5 27.5 11v10L23 17.5Z" fill="#fff"/>',
+        wire: '<path d="M27 9.5c-.9.4-1.8.7-2.8.8a4.8 4.8 0 0 0 2.1-2.6c-.9.6-2 1-3.1 1.3a4.9 4.9 0 0 0-8.3 4.4A13.8 13.8 0 0 1 5 8.2a4.8 4.8 0 0 0 1.5 6.5c-.8 0-1.5-.2-2.2-.6v.1c0 2.4 1.7 4.4 3.9 4.8-.7.2-1.4.2-2.1.1a4.9 4.9 0 0 0 4.6 3.4A9.8 9.8 0 0 1 3 24.7a13.8 13.8 0 0 0 7.5 2.2c9 0 13.9-7.5 13.9-13.9v-.6c1-.7 1.8-1.6 2.6-2.9Z" fill="#fff"/>',
+        picta: '<rect x="6" y="6" width="20" height="20" rx="6" fill="none" stroke="#fff" stroke-width="2.2"/><circle cx="16" cy="16" r="5" fill="none" stroke="#fff" stroke-width="2.2"/><circle cx="22.3" cy="9.7" r="1.4" fill="#fff"/>',
+        loopz: '<path d="M18 5v14.5a4.5 4.5 0 1 1-3.5-4.4V11a7.5 7.5 0 1 0 6.5 7.4V13a8 8 0 0 0 5 1.7v-3.2A5 5 0 0 1 21 8h-3Z" fill="#fff"/>',
+        matchup: '<path d="M16 25s-9-5.6-9-12.2A5.3 5.3 0 0 1 16 9.4a5.3 5.3 0 0 1 9 3.4C25 19.4 16 25 16 25Z" fill="#fff"/>',
+        darkchat: '<circle cx="16" cy="16" r="10" fill="#fff"/><circle cx="12.5" cy="14.5" r="1.6" fill="#1f2937"/><circle cx="19.5" cy="14.5" r="1.6" fill="#1f2937"/><path d="M11 20c1.5 1.3 3.2 2 5 2s3.5-.7 5-2" stroke="#1f2937" stroke-width="1.6" fill="none" stroke-linecap="round"/>',
+        bank: '<path d="M16 5 27 11v2H5v-2Z" fill="#fff"/><rect x="6" y="14" width="4" height="10" fill="#fff"/><rect x="14" y="14" width="4" height="10" fill="#fff"/><rect x="22" y="14" width="4" height="10" fill="#fff"/><rect x="5" y="25" width="22" height="2.5" fill="#fff"/>',
+        crypto: '<circle cx="16" cy="16" r="10.5" fill="none" stroke="#fff" stroke-width="2.4"/><path d="M14 10.5h3.2a2.9 2.9 0 0 1 0 5.8H14m0 0h3.6a3 3 0 0 1 0 6H14m0-11.8v11.8m0-11.8v-2m0 13.8v2" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round"/>',
+        marketplace: '<path d="M6 11h20l-1.5 12a2 2 0 0 1-2 1.8H9.5a2 2 0 0 1-2-1.8Z" fill="#fff"/><path d="M11 11a5 5 0 0 1 10 0" stroke="#fff" stroke-width="2" fill="none"/>',
+        mail: '<rect x="5" y="8" width="22" height="16" rx="3" fill="#fff"/><path d="M6 9.5 16 18l10-8.5" stroke="#2563eb" stroke-width="1.8" fill="none" stroke-linecap="round"/>',
+        notes: '<rect x="6" y="5" width="20" height="22" rx="3" fill="#fff"/><rect x="9.5" y="11" width="13" height="2" fill="#e8d98a"/><rect x="9.5" y="15.5" width="13" height="2" fill="#e8d98a"/><rect x="9.5" y="20" width="8" height="2" fill="#e8d98a"/>',
+        clock: '<circle cx="16" cy="16" r="10.5" fill="none" stroke="#fff" stroke-width="2.2"/><path d="M16 9.5V16l5 3" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/>',
+        maps: '<path d="M16 6c-4 0-7 3-7 7 0 5.3 7 13 7 13s7-7.7 7-13c0-4-3-7-7-7Z" fill="#fff"/><circle cx="16" cy="13" r="2.6" fill="#16a34a"/>',
+        music: '<circle cx="10.5" cy="22" r="3.2" fill="#fff"/><circle cx="21.5" cy="19" r="3.2" fill="#fff"/><path d="M13.7 22V9.5L24.7 7v11.5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/>',
+        voicememo: '<rect x="12.5" y="6" width="7" height="14" rx="3.5" fill="#fff"/><path d="M9 16a7 7 0 0 0 14 0" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/><line x1="16" y1="23" x2="16" y2="27" stroke="#fff" stroke-width="2" stroke-linecap="round"/>',
+        garages: '<path d="M6 15 16 7l10 8v11H6Z" fill="#fff"/><rect x="10" y="17" width="12" height="7" fill="#818cf8"/>',
+        appstore: '<path d="M16 6l3 6.5 7 1-5.2 4.9 1.3 7L16 22l-6.1 3.4 1.3-7L6 13.5l7-1Z" fill="#fff"/>',
+    };
+    function iconSvg(id, size) {
+        size = size || 34;
+        const g = GRADIENTS[id] || ['#9ca3af', '#4b5563'];
+        const gid = 'g_' + id;
+        const stops = g.map((c, i) => `<stop offset="${(i / (g.length - 1)) * 100}%" stop-color="${c}"/>`).join('');
+        return `<svg viewBox="0 0 32 32" width="${size}" height="${size}"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="1" y2="1">${stops}</linearGradient></defs>` +
+            `<rect width="32" height="32" rx="8" fill="url(#${gid})"/>${GLYPHS[id] || ''}</svg>`;
+    }
+    function appTile(app, opts) {
+        opts = opts || {};
+        const badge = opts.badge ? `<span class="badge">${opts.badge > 99 ? '99+' : opts.badge}</span>` : '';
+        return `
+            <div class="app-icon-wrap" data-open-app="${app.id}">
+                <div class="app-icon">${iconSvg(app.icon)}${badge}</div>
+                ${opts.noLabel ? '' : `<label>${app.label}</label>`}
+            </div>`;
     }
 
-    // ═══════════════════════════ AUDIO ALERT ══════════════════════════
-    let audioCtx = null;
-    function playAlert() {
-        try {
-            audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-            const now = audioCtx.currentTime;
-            [[880, 0], [660, 0.14]].forEach(([freq, delay]) => {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = 'sine';
-                osc.frequency.value = freq;
-                gain.gain.setValueAtTime(0.0001, now + delay);
-                gain.gain.exponentialRampToValueAtTime(0.22, now + delay + 0.02);
-                gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + 0.13);
-                osc.connect(gain).connect(audioCtx.destination);
-                osc.start(now + delay);
-                osc.stop(now + delay + 0.15);
-            });
-        } catch (e) { /* audio unavailable, ignore */ }
+    // ═══════════════════════════ STATE ═══════════════════════════════
+    const HD = {
+        state: {
+            booted: false, onboarded: false, locked: true, ccOpen: false,
+            number: null, name: null, apps: [], installedApps: [],
+            settings: { darkMode: false, dynamicMode: false, wallpaper: 'aurora', noCallerId: false, receiveDrop: true, hasPasscode: false },
+            wallpapers: [],
+            unread: { messages: 0 },
+            activeCall: null,
+            brightness: 100, volume: 70, airplaneMode: false, dnd: false, flashlight: false,
+        },
+        post, toast, iconSvg, appTile,
+    };
+    window.HD = HD;
+
+    // ═══════════════════════════ EVENT BUS ═══════════════════════════
+    // App files subscribe with HD.on('contacts', fn) instead of adding
+    // their own window.message listener, so several apps can each react
+    // to their own slice of server pushes without stepping on others.
+    const listeners = {};
+    HD.on = function (action, fn) {
+        (listeners[action] = listeners[action] || []).push(fn);
+    };
+    function emit(action, args) {
+        (listeners[action] || []).forEach((fn) => fn.apply(null, args || []));
     }
 
-    // Classic UK dual-ring cadence: 400ms ring / 200ms gap / 400ms ring / 2000ms silence, repeating.
-    let ringtoneInterval = null;
-    function playRingtone() {
-        if (ringtoneInterval) return;
-        const burst = (startAt) => {
-            try {
-                audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = 'sine';
-                osc.frequency.value = 400;
-                gain.gain.setValueAtTime(0.001, startAt);
-                gain.gain.exponentialRampToValueAtTime(0.18, startAt + 0.02);
-                gain.gain.setValueAtTime(0.18, startAt + 0.38);
-                gain.gain.exponentialRampToValueAtTime(0.001, startAt + 0.4);
-                osc.connect(gain).connect(audioCtx.destination);
-                osc.start(startAt);
-                osc.stop(startAt + 0.4);
-            } catch (e) { /* audio unavailable, ignore */ }
+    function wallpaperCss(id) {
+        const map = {
+            aurora: 'radial-gradient(circle at 30% 20%, #6d5bd0, #1e293b 60%), linear-gradient(160deg,#3b82f6,#1e1b4b)',
+            sunset: 'linear-gradient(160deg,#f97316,#db2777 55%,#4c1d95)',
+            midnight: 'linear-gradient(160deg,#0f172a,#1e293b 60%,#000)',
+            mono: 'linear-gradient(160deg,#4b5563,#111827)',
         };
-        const cycle = () => {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const now = audioCtx.currentTime;
-            burst(now);
-            burst(now + 0.6);
-        };
-        cycle();
-        ringtoneInterval = setInterval(cycle, 3000);
+        return map[id] || map.aurora;
     }
-    function stopRingtone() {
-        if (ringtoneInterval) { clearInterval(ringtoneInterval); ringtoneInterval = null; }
+    function applyTheme() {
+        const s = HD.state.settings;
+        let dark = s.darkMode;
+        if (s.dynamicMode) {
+            const h = new Date().getHours();
+            dark = h < 7 || h >= 19;
+        }
+        $root.setAttribute('data-theme', dark ? 'dark' : 'light');
+        document.getElementById('statusbar').classList.toggle('on-dark', HD.state.currentScreen === 'lock' || HD.state.currentScreen === 'home');
+        const bg = HD.state.settings.customWallpaperUrl ? `url(${HD.state.settings.customWallpaperUrl})` : wallpaperCss(s.wallpaper);
+        document.querySelectorAll('.wallpaper-target').forEach((el) => { el.style.background = bg; el.style.backgroundSize = 'cover'; el.style.backgroundPosition = 'center'; });
     }
+    HD.applyTheme = applyTheme;
 
     // ═══════════════════════════ SCREEN ROUTER ════════════════════════
-    function showScreen(name, title) {
-        document.querySelectorAll('.screen').forEach((el) => el.classList.add('hidden'));
-        $(`screen-${name}`).classList.remove('hidden');
-        screen = name;
-        $('screenTitle').textContent = title || '';
-        $('navbar').classList.toggle('hidden', name === 'home');
-        $('backBtn').classList.toggle('hidden', screenParent[name] === undefined ? false : screenParent[name] === null);
+    function showScreen(name, html) {
+        HD.state.currentScreen = name;
+        $screens.innerHTML = `<div class="screen" id="screen-${name}">${html}</div>`;
+        applyTheme();
+    }
+    HD.showScreen = showScreen;
+
+    function renderBoot() {
+        showScreen('boot', `<div class="boot-logo"></div>`);
+        setTimeout(() => {
+            if (HD.state.settings.onboarded) renderLock();
+            else renderOnboarding();
+        }, 900);
     }
 
-    function goBack() {
-        const parent = screenParent[screen];
-        if (parent === null || parent === undefined) return;
-        if (parent === 'home') openHome();
-        else if (parent === 'messages') openMessages();
+    // ═══════════════════════════ ONBOARDING ═══════════════════════════
+    const Onboard = {
+        step: 0,
+        data: { darkMode: false, dynamicMode: false, passcode: '', email: '', password: '', password2: '', securityAnswer: '' },
+    };
+
+    function renderOnboarding() {
+        const steps = [welcomeStep, appearanceStep, passcodeStep, accountStep];
+        showScreen('onboard', steps[Onboard.step]());
+        bindOnboardEvents();
     }
 
-    function openHome() { showScreen('home', ''); }
-    $('homeBtn').addEventListener('click', openHome);
-    $('backBtn').addEventListener('click', goBack);
-
-    // ═══════════════════════════ APP GRID (data-driven) ═══════════════
-    // Single source of truth for the home screen — add an app by adding
-    // an entry here, nothing else needs touching structurally. `open`
-    // references are resolved lazily inside the click handler (not
-    // captured at array-construction time) so declaration order in this
-    // file doesn't matter. `core: true` apps are always on the home
-    // screen and can't be uninstalled (mirrors iOS system apps); every
-    // other app only shows once installedApps has its id, via the App
-    // Store — see openAppStore() below.
-    const APPS = [
-        { id: 'phone', label: 'Phone', color: '#2E7D4F', glyph: '☎', core: true, dock: true },
-        { id: 'messages', label: 'Messages', color: '#3E7CB1', glyph: '✉', core: true, dock: true },
-        { id: 'contacts', label: 'Contacts', color: '#6D7480', glyph: '☰', core: true, dock: true },
-        { id: 'appstore', label: 'App Store', color: '#0FA8E0', glyph: '⬇', core: true },
-        { id: 'airdrop', label: 'AirDrop', color: '#1B8CD1', glyph: '⤢' },
-        { id: 'facetime', label: 'FaceTime', color: '#2ECC71', glyph: '🎥' },
-        { id: 'wire', label: 'Wire', color: '#1B8CD1', glyph: 'W' },
-        { id: 'picta', label: 'Picta', color: '#C0388D', glyph: 'P' },
-        { id: 'loopz', label: 'Loopz', color: '#B03A3A', glyph: 'L' },
-        { id: 'garages', label: 'Garages', color: '#D8892B', glyph: 'G' },
-        { id: 'bank', label: 'Bank', color: '#2E8B57', glyph: '£' },
-        { id: 'mail', label: 'Mail', color: '#5B6EE1', glyph: '@' },
-        { id: 'marketplace', label: 'Market', color: '#CC8A1E', glyph: '$' },
-        { id: 'notes', label: 'Notes', color: '#B8A13E', glyph: '✎' },
-        { id: 'crypto', label: 'Crypto', color: '#7A4FD1', glyph: '◈' },
-        { id: 'gallery', label: 'Gallery', color: '#3E9C9C', glyph: '▦' },
-        { id: 'settings', label: 'Settings', color: '#5A5F66', glyph: '⚙', core: true, dock: true },
-    ];
-
-    function openApp(id) {
-        if (id === 'phone') openDialer();
-        else if (id === 'messages') openMessages();
-        else if (id === 'contacts') openContacts();
-        else if (id === 'appstore') openAppStore();
-        else if (id === 'airdrop') showScreen('airdrop', 'AirDrop');
-        else if (id === 'facetime') openFacetime();
-        else if (id === 'garages') openGarages();
-        else if (id === 'bank') openBank();
-        else if (id === 'mail') openMail();
-        else if (id === 'marketplace') openMarketplace();
-        else if (id === 'notes') openNotes();
-        else if (id === 'crypto') openCrypto();
-        else if (id === 'gallery') openGallery();
-        else if (id === 'settings') openSettings();
-        else if (id === 'wire' || id === 'picta' || id === 'loopz') openFeed(id);
-    }
-
-    function makeAppIcon(app) {
-        const btn = document.createElement('button');
-        btn.className = 'app-icon';
-        btn.innerHTML = `<span class="icon-tile" style="--c:${app.color}">${app.glyph}</span><span class="icon-label">${app.label}</span>`;
-        btn.addEventListener('click', () => openApp(app.id));
-        return btn;
-    }
-
-    function renderAppGrid() {
-        const grid = $('appGrid');
-        grid.innerHTML = '';
-        APPS.filter((app) => app.core || installedApps.has(app.id)).forEach((app) => grid.appendChild(makeAppIcon(app)));
-
-        const dock = $('dock');
-        dock.innerHTML = '';
-        APPS.filter((app) => app.dock).forEach((app) => dock.appendChild(makeAppIcon(app)));
-    }
-    renderAppGrid(); // built once here (dock/core apps need nothing from the server), re-run once installedApps arrives
-
-    // ═══════════════════════════ APP STORE ═════════════════════════════
-    function openAppStore() {
-        showScreen('appstore', 'App Store');
-        renderAppStore();
-    }
-
-    function renderAppStore() {
-        const list = $('appstoreList');
-        list.innerHTML = '';
-        const downloadable = APPS.filter((app) => !app.core);
-        if (!downloadable.length) { list.innerHTML = '<div class="empty-state">No apps available.</div>'; return; }
-        downloadable.forEach((app) => {
-            const installed = installedApps.has(app.id);
-            const row = document.createElement('div');
-            row.className = 'row-card no-hover';
-            row.innerHTML = `
-                <div class="row-main" style="flex-direction:row; align-items:center; gap:10px;">
-                    <span class="icon-tile" style="--c:${app.color}; width:38px; height:38px; font-size:15px; border-radius:11px;">${app.glyph}</span>
-                    <span class="row-title">${app.label}</span>
-                </div>
-                <div class="row-actions">
-                    <button class="store-btn ${installed ? 'installed' : ''}" data-id="${app.id}">${installed ? 'Remove' : 'Get'}</button>
-                </div>`;
-            row.querySelector('.store-btn').addEventListener('click', () => {
-                post(installed ? 'uninstallApp' : 'installApp', { id: app.id });
-            });
-            list.appendChild(row);
-        });
-    }
-
-    // ═══════════════════════════ AIRDROP ════════════════════════════════
-    $('airdropShareBtn').addEventListener('click', () => post('airdropShare'));
-
-    function showAirdropPrompt(data) {
-        $('airdropFrom').textContent = `${data.name} wants to share their contact`;
-        $('airdropPrompt').classList.remove('hidden');
-
-        const cleanup = () => $('airdropPrompt').classList.add('hidden');
-        $('airdropAccept').onclick = () => { post('saveContact', { name: data.name, number: data.number }); cleanup(); };
-        $('airdropDecline').onclick = cleanup;
-    }
-
-    // ═══════════════════════════ CLOCK ════════════════════════════════
-    setInterval(() => {
-        const d = new Date();
-        $('clock').textContent = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-    }, 1000);
-
-    // ═══════════════════════════ CONTACTS ═════════════════════════════
-    let contactFormOpen = false;
-    function openContacts() {
-        contactFormOpen = false;
-        showScreen('contacts', 'Contacts');
-        post('getContacts');
-    }
-
-    function renderContacts() {
-        const list = $('contactsList');
-        list.innerHTML = '';
-        if (!contacts.length) {
-            list.innerHTML = '<div class="empty-state">No contacts saved.</div>';
-        }
-        contacts.forEach((c) => {
-            const row = document.createElement('div');
-            row.className = 'row-card';
-            row.innerHTML = `
-                <div class="row-main">
-                    <span class="row-title">${escapeHtml(c.name)}</span>
-                    <span class="row-sub">${escapeHtml(c.number)}</span>
-                </div>
-                <div class="row-actions">
-                    <button data-act="call" title="Call">☎</button>
-                    <button data-act="msg" title="Message">✉</button>
-                    <button data-act="del" title="Delete">✕</button>
-                </div>`;
-            row.querySelector('[data-act="call"]').addEventListener('click', () => startCall(c.number));
-            row.querySelector('[data-act="msg"]').addEventListener('click', () => openConversation(c.number, c.name));
-            row.querySelector('[data-act="del"]').addEventListener('click', () => post('deleteContact', { id: c.id }));
-            list.appendChild(row);
-        });
-    }
-
-    $('addContactBtn').addEventListener('click', () => {
-        if (contactFormOpen) return;
-        contactFormOpen = true;
-        const form = document.createElement('div');
-        form.className = 'inline-form';
-        form.innerHTML = `
-            <input type="text" class="field-input" id="newContactName" placeholder="Name" maxlength="60">
-            <input type="text" class="field-input" id="newContactNumber" placeholder="Number" maxlength="15">
-            <div class="form-actions">
-                <button class="wide-btn" id="newContactCancel">Cancel</button>
-                <button class="wide-btn call-btn" id="newContactSave">Save</button>
+    function welcomeStep() {
+        return `
+            <div class="onboard">
+                <div class="spacer"></div>
+                <div class="onboard-logo-mark"></div>
+                <h1>Welcome to HD Phone</h1>
+                <p class="sub">Let's get your phone set up. This only takes a minute.</p>
+                <div class="spacer"></div>
+                <button class="btn-primary" id="ob-next">Get Started</button>
             </div>`;
-        $('contactsList').prepend(form);
-        $('newContactCancel').addEventListener('click', () => { contactFormOpen = false; renderContacts(); });
-        $('newContactSave').addEventListener('click', () => {
-            const name = $('newContactName').value.trim();
-            const number = $('newContactNumber').value.trim();
-            if (!name || !number) return;
-            post('saveContact', { name, number });
-            contactFormOpen = false;
-        });
-    });
+    }
 
-    // ═══════════════════════════ DIALER ═══════════════════════════════
-    let dialpadBuilt = false;
-    function openDialer() {
-        showScreen('dialer', 'Phone');
-        if (!dialpadBuilt) {
-            dialpadBuilt = true;
-            const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'];
-            const pad = $('dialpad');
-            keys.forEach((k) => {
-                const b = document.createElement('button');
-                b.textContent = k;
-                b.addEventListener('click', () => { $('dialInput').value += k; });
-                pad.appendChild(b);
+    function appearanceStep() {
+        return `
+            <div class="onboard">
+                <h1 style="font-size:22px;margin-top:20px;">Appearance</h1>
+                <p class="sub">Choose light or dark, or let it follow the in-game time of day.</p>
+                <div class="appearance-cards">
+                    <div class="appearance-card">
+                        <div class="appearance-preview ${!Onboard.data.darkMode ? 'selected' : ''}" data-mode="light"><span class="preview-clock">9:41</span></div>
+                        <label>Light</label>
+                    </div>
+                    <div class="appearance-card">
+                        <div class="appearance-preview dark ${Onboard.data.darkMode ? 'selected' : ''}" data-mode="dark"><span class="preview-clock">9:41</span></div>
+                        <label>Dark</label>
+                    </div>
+                </div>
+                <div class="toggle-row" style="margin-top:6px;">
+                    <div><div class="label">Dynamic</div><div class="desc">Switch automatically with time of day</div></div>
+                    <div class="switch ${Onboard.data.dynamicMode ? 'on' : ''}" id="ob-dynamic"><div class="knob"></div></div>
+                </div>
+                <div class="spacer"></div>
+                <button class="btn-primary" id="ob-next">Continue</button>
+            </div>`;
+    }
+
+    function passcodeStep() {
+        const filled = Onboard.data.passcode.length;
+        const dots = [0, 1, 2, 3].map((i) => `<div class="dot ${i < filled ? 'filled' : ''}"></div>`).join('');
+        return `
+            <div class="onboard">
+                <div class="spacer"></div>
+                <h1 style="font-size:22px;">Set a Passcode</h1>
+                <p class="sub">Secure your phone with a 4-digit passcode.</p>
+                <div class="passcode-dots">${dots}</div>
+                <div class="keypad" id="ob-keypad">
+                    ${[1,2,3,4,5,6,7,8,9].map((n) => `<button data-key="${n}">${n}</button>`).join('')}
+                    <div class="keypad-empty"></div>
+                    <button data-key="0">0</button>
+                    <button data-key="back">⌫</button>
+                </div>
+                <div class="spacer"></div>
+                <button class="btn-ghost" id="ob-skip">Skip</button>
+            </div>`;
+    }
+
+    function accountStep() {
+        return `
+            <div class="onboard">
+                <div class="onboard-logo-mark" style="margin-top:20px;"></div>
+                <h1 style="font-size:21px;">Create Your HD ID</h1>
+                <p class="sub">Use your HD ID to personalise your phone.</p>
+                <div class="field-group">
+                    <div style="display:flex;align-items:center;background:var(--surface-2);border-radius:14px;padding:2px 16px;">
+                        <input class="field" style="padding-left:0;" id="ob-email" placeholder="Your username" />
+                        <span style="color:var(--text-dim);font-size:14px;white-space:nowrap;">@hazydev.com</span>
+                    </div>
+                    <input class="field" id="ob-password" type="password" placeholder="Your password" />
+                    <input class="field" id="ob-password2" type="password" placeholder="Your password again" />
+                    <input class="field" id="ob-security" placeholder="The name of your first pet?" />
+                </div>
+                <div class="spacer"></div>
+                <button class="btn-primary" id="ob-create">Create HD ID</button>
+                <button class="btn-ghost" id="ob-skip2">Skip for now</button>
+            </div>`;
+    }
+
+    function bindOnboardEvents() {
+        const next = document.getElementById('ob-next');
+        if (next) next.onclick = () => { Onboard.step++; renderOnboarding(); };
+
+        document.querySelectorAll('[data-mode]').forEach((el) => {
+            el.onclick = () => { Onboard.data.darkMode = el.dataset.mode === 'dark'; renderOnboarding(); };
+        });
+        const dyn = document.getElementById('ob-dynamic');
+        if (dyn) dyn.onclick = () => { Onboard.data.dynamicMode = !Onboard.data.dynamicMode; renderOnboarding(); };
+
+        const keypad = document.getElementById('ob-keypad');
+        if (keypad) {
+            keypad.querySelectorAll('button').forEach((btn) => {
+                btn.onclick = () => {
+                    const key = btn.dataset.key;
+                    if (key === 'back') Onboard.data.passcode = Onboard.data.passcode.slice(0, -1);
+                    else if (Onboard.data.passcode.length < 4) Onboard.data.passcode += key;
+                    if (Onboard.data.passcode.length === 4) {
+                        post('setPasscode', { passcode: Onboard.data.passcode });
+                        Onboard.step++;
+                        setTimeout(renderOnboarding, 150);
+                    } else {
+                        renderOnboarding();
+                    }
+                };
             });
         }
-    }
-    $('dialCallBtn').addEventListener('click', () => {
-        const number = $('dialInput').value.trim();
-        if (!number) return;
-        startCall(number);
-        $('dialInput').value = '';
-    });
+        const skip = document.getElementById('ob-skip');
+        if (skip) skip.onclick = () => { Onboard.step++; renderOnboarding(); };
 
-    // ═══════════════════════════ CALLS ════════════════════════════════
-    function startCall(number) {
-        activeCall = { id: null, number, name: number, direction: 'outgoing', status: 'ringing' };
-        showScreen('incall', 'Call');
-        renderIncall();
-        post('startCall', { number });
-    }
-
-    function renderIncall() {
-        if (!activeCall) return;
-        $('incallName').textContent = activeCall.name || activeCall.number;
-        $('backBtn').classList.add('hidden');
-        const actions = $('incallActions');
-        actions.innerHTML = '';
-
-        if (activeCall.status === 'ringing' && activeCall.direction === 'incoming') {
-            $('incallStatus').textContent = 'Incoming call...';
-            actions.innerHTML = `<button class="btn-answer" id="btnAnswer">☎</button><button class="btn-decline" id="btnDecline">✕</button>`;
-            $('btnAnswer').addEventListener('click', () => post('answerCall', { id: activeCall.id }));
-            $('btnDecline').addEventListener('click', () => post('declineCall', { id: activeCall.id }));
-        } else if (activeCall.status === 'ringing') {
-            $('incallStatus').textContent = 'Ringing...';
-            actions.innerHTML = `<button class="btn-hangup" id="btnHangup">✕</button>`;
-            $('btnHangup').addEventListener('click', () => post('endCall', { id: activeCall.id }));
-        } else if (activeCall.status === 'active') {
-            actions.innerHTML = `<button class="btn-hangup" id="btnHangup">✕</button>`;
-            $('btnHangup').addEventListener('click', () => post('endCall', { id: activeCall.id }));
-        }
-    }
-
-    function endCallUI(message) {
-        stopRingtone();
-        if (callTimer) { clearInterval(callTimer); callTimer = null; }
-        activeCall = null;
-        if (message) $('incallStatus').textContent = message;
-        setTimeout(() => { if (screen === 'incall') openHome(); }, 1200);
-    }
-
-    // ═══════════════════════════ FACETIME ══════════════════════════════
-    // Real two-way video/audio over WebRTC. The server (server/facetime.lua)
-    // only ever relays SDP offers/answers and ICE candidates between the
-    // two RTCPeerConnections below — media itself is peer-to-peer, never
-    // touches FXServer. A public STUN server handles NAT traversal; there's
-    // no TURN fallback, so a call between two very restrictive NATs (rare
-    // for two players on the same game server, but possible) may fail to
-    // connect even though signaling succeeds.
-    const FT_ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];
-    let activeFacetime = null; // { id, number, name, direction, status }
-    let ftPeerConnection = null;
-    let ftLocalStream = null;
-    let ftIsOfferer = false;
-    let ftPendingIce = [];
-    let ftTimer = null;
-
-    function openFacetime() {
-        showScreen('facetime', 'FaceTime');
-    }
-    $('ftCallBtn').addEventListener('click', () => {
-        const number = $('ftDialInput').value.trim();
-        if (!number) return;
-        startFacetime(number);
-        $('ftDialInput').value = '';
-    });
-
-    function startFacetime(number) {
-        activeFacetime = { id: null, number, name: number, direction: 'outgoing', status: 'ringing' };
-        showScreen('facetime-incall', 'FaceTime');
-        renderFacetime();
-        post('facetimeStart', { number });
-    }
-
-    function renderFacetime() {
-        if (!activeFacetime) return;
-        $('ftName').textContent = activeFacetime.name || activeFacetime.number;
-        $('backBtn').classList.add('hidden');
-        const actions = $('ftActions');
-        actions.innerHTML = '';
-
-        if (activeFacetime.status === 'ringing' && activeFacetime.direction === 'incoming') {
-            $('ftStatus').textContent = 'Incoming FaceTime...';
-            actions.innerHTML = `<button class="btn-answer" id="ftAnswer">☎</button><button class="btn-decline" id="ftDecline">✕</button>`;
-            $('ftAnswer').addEventListener('click', () => post('facetimeAnswer', { id: activeFacetime.id }));
-            $('ftDecline').addEventListener('click', () => post('facetimeDecline', { id: activeFacetime.id }));
-        } else if (activeFacetime.status === 'ringing') {
-            $('ftStatus').textContent = 'Calling...';
-            actions.innerHTML = `<button class="btn-hangup" id="ftHangup">✕</button>`;
-            $('ftHangup').addEventListener('click', () => post('facetimeEnd', { id: activeFacetime.id }));
-        } else if (activeFacetime.status === 'active') {
-            actions.innerHTML = `<button class="btn-hangup" id="ftHangup">✕</button>`;
-            $('ftHangup').addEventListener('click', () => post('facetimeEnd', { id: activeFacetime.id }));
-        }
-    }
-
-    async function ftSetupLocalMedia() {
-        if (ftLocalStream) return true;
-        try {
-            ftLocalStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            $('ftLocalVideo').srcObject = ftLocalStream;
-            return true;
-        } catch (e) {
-            $('ftStatus').textContent = 'Camera/mic unavailable — check FiveM has permission.';
-            return false;
-        }
-    }
-
-    function ftCreatePeerConnection() {
-        const pc = new RTCPeerConnection({ iceServers: FT_ICE_SERVERS });
-        ftLocalStream.getTracks().forEach((track) => pc.addTrack(track, ftLocalStream));
-        pc.ontrack = (e) => { $('ftRemoteVideo').srcObject = e.streams[0]; };
-        pc.onicecandidate = (e) => {
-            if (e.candidate && activeFacetime) post('facetimeSignal', { id: activeFacetime.id, signal: { type: 'ice', candidate: e.candidate } });
+        const create = document.getElementById('ob-create');
+        if (create) create.onclick = () => {
+            const email = document.getElementById('ob-email').value.trim();
+            const password = document.getElementById('ob-password').value;
+            const password2 = document.getElementById('ob-password2').value;
+            const securityAnswer = document.getElementById('ob-security').value.trim();
+            if (!email || !password) { toast('Enter an email and password.'); return; }
+            if (password !== password2) { toast("Passwords don't match."); return; }
+            post('createAccount', { email, password, securityAnswer });
         };
-        return pc;
+        const skip2 = document.getElementById('ob-skip2');
+        if (skip2) skip2.onclick = () => { post('skipOnboarding', {}); finishOnboarding(); };
     }
 
-    // Both sides receive 'facetimeAnswered' independently and each calls
-    // ftBeginNegotiation() on its own — the offer can arrive over the wire
-    // before a side's own setup finishes. Sharing one promise means
-    // whichever path (own negotiation vs. an incoming offer) gets there
-    // first does the actual setup, and the other just awaits the same
-    // result instead of racing to create a second peer connection.
-    let ftNegotiationPromise = null;
-    function ftEnsurePeerConnection() {
-        if (!ftNegotiationPromise) {
-            ftNegotiationPromise = (async () => {
-                const ok = await ftSetupLocalMedia();
-                if (!ok) { ftNegotiationPromise = null; return false; }
-                ftPeerConnection = ftCreatePeerConnection();
-                return true;
-            })();
-        }
-        return ftNegotiationPromise;
+    function finishOnboarding() {
+        HD.state.settings.onboarded = true;
+        HD.state.settings.darkMode = Onboard.data.darkMode;
+        HD.state.settings.dynamicMode = Onboard.data.dynamicMode;
+        post('setAppearance', { darkMode: Onboard.data.darkMode, dynamicMode: Onboard.data.dynamicMode });
+        renderLock();
     }
 
-    async function ftBeginNegotiation() {
-        const ok = await ftEnsurePeerConnection();
-        if (!ok) return;
-        if (ftIsOfferer) {
-            const offer = await ftPeerConnection.createOffer();
-            await ftPeerConnection.setLocalDescription(offer);
-            post('facetimeSignal', { id: activeFacetime.id, signal: { type: 'offer', sdp: offer } });
-        }
-    }
-
-    async function ftHandleSignal(signal) {
-        if (!signal) return;
-        if (signal.type === 'offer') {
-            const ok = await ftEnsurePeerConnection();
-            if (!ok) return;
-            await ftPeerConnection.setRemoteDescription(new RTCSessionDescription(signal.sdp));
-            ftPendingIce.splice(0).forEach((c) => ftPeerConnection.addIceCandidate(c).catch(() => {}));
-            const answer = await ftPeerConnection.createAnswer();
-            await ftPeerConnection.setLocalDescription(answer);
-            post('facetimeSignal', { id: activeFacetime.id, signal: { type: 'answer', sdp: answer } });
-        } else if (signal.type === 'answer') {
-            if (ftPeerConnection) await ftPeerConnection.setRemoteDescription(new RTCSessionDescription(signal.sdp));
-        } else if (signal.type === 'ice') {
-            if (ftPeerConnection && ftPeerConnection.remoteDescription) {
-                ftPeerConnection.addIceCandidate(signal.candidate).catch(() => {});
-            } else {
-                ftPendingIce.push(signal.candidate);
-            }
-        }
-    }
-
-    function ftCleanup() {
-        if (ftPeerConnection) { ftPeerConnection.close(); ftPeerConnection = null; }
-        if (ftLocalStream) { ftLocalStream.getTracks().forEach((t) => t.stop()); ftLocalStream = null; }
-        $('ftLocalVideo').srcObject = null;
-        $('ftRemoteVideo').srcObject = null;
-        ftIsOfferer = false;
-        ftPendingIce = [];
-        ftNegotiationPromise = null;
-        if (ftTimer) { clearInterval(ftTimer); ftTimer = null; }
-    }
-
-    function endFacetimeUI(message) {
-        stopRingtone();
-        ftCleanup();
-        activeFacetime = null;
-        if (message) $('ftStatus').textContent = message;
-        setTimeout(() => { if (screen === 'facetime-incall') openHome(); }, 1200);
-    }
-
-    // ═══════════════════════════ MESSAGES ═════════════════════════════
-    let messageFormOpen = false;
-    function openMessages() {
-        messageFormOpen = false;
-        showScreen('messages', 'Messages');
-        post('getThreads');
-    }
-
-    function renderThreads(rows) {
-        const list = $('threadsList');
-        list.innerHTML = '';
-        if (!rows.length) {
-            list.innerHTML = '<div class="empty-state">No messages yet.</div>';
-        }
-        rows.forEach((t) => {
-            const row = document.createElement('div');
-            row.className = 'row-card';
-            row.innerHTML = `
-                <div class="row-main">
-                    <span class="row-title">${escapeHtml(t.name || t.number)}</span>
-                    <span class="row-sub">${t.fromMe ? 'You: ' : ''}${escapeHtml(t.lastMessage)}</span>
+    // ═══════════════════════════ LOCK SCREEN ══════════════════════════
+    let lockEntry = '';
+    function renderLock() {
+        lockEntry = '';
+        const now = new Date();
+        const time = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: false });
+        const date = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+        showScreen('lock', `
+            <div class="wallpaper-target" style="position:absolute;inset:0;"></div>
+            <div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;width:100%;flex:1;">
+                <div class="lock-date">${date}</div>
+                <div class="lock-time">${time}</div>
+                <div id="lock-passcode-area"></div>
+                <div style="flex:1;"></div>
+                <div class="swipe-hint" id="lock-hint">Tap to open</div>
+                <div class="lock-bottom">
+                    <div class="lock-quick-btn" id="lock-flashlight">${flashlightSvg()}</div>
+                    <div class="lock-quick-btn" id="lock-camera">${cameraQuickSvg()}</div>
                 </div>
-                ${t.unread ? `<span class="unread-badge">${t.unread}</span>` : ''}`;
-            row.addEventListener('click', () => openConversation(t.number, t.name));
-            list.appendChild(row);
-        });
+            </div>
+        `);
+        document.getElementById('screen-lock').addEventListener('click', onLockTap);
     }
+    function flashlightSvg() { return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M9 2h6l-1 6h2l-7 12 1-8H8Z"/></svg>`; }
+    function cameraQuickSvg() { return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><circle cx="12" cy="13.5" r="3.5"/><path d="M9 7l1-2h4l1 2"/></svg>`; }
 
-    $('newMessageBtn').addEventListener('click', () => {
-        if (messageFormOpen) return;
-        messageFormOpen = true;
-        const form = document.createElement('div');
-        form.className = 'inline-form';
-        form.innerHTML = `
-            <input type="text" class="field-input" id="newMsgNumber" placeholder="Number" maxlength="15">
-            <div class="form-actions">
-                <button class="wide-btn" id="newMsgCancel">Cancel</button>
-                <button class="wide-btn call-btn" id="newMsgGo">Next</button>
-            </div>`;
-        $('threadsList').prepend(form);
-        $('newMsgCancel').addEventListener('click', () => { messageFormOpen = false; renderThreads([]); post('getThreads'); });
-        $('newMsgGo').addEventListener('click', () => {
-            const number = $('newMsgNumber').value.trim();
-            if (!number) return;
-            messageFormOpen = false;
-            openConversation(number, null);
-        });
-    });
-
-    function openConversation(number, name) {
-        currentConvNumber = number;
-        currentConvName = name;
-        showScreen('conversation', name || number);
-        $('conversationThread').innerHTML = '';
-        post('getConversation', { number });
-    }
-
-    function renderConversation(number, rows) {
-        if (number !== currentConvNumber) return;
-        const thread = $('conversationThread');
-        thread.innerHTML = '';
-        rows.forEach((m) => appendBubble(m, false));
-        thread.scrollTop = thread.scrollHeight;
-    }
-
-    function appendBubble(m, scroll) {
-        const thread = $('conversationThread');
-        const bubble = document.createElement('div');
-        bubble.className = 'msg-bubble ' + (m.sender === myNumber ? 'msg-mine' : 'msg-theirs');
-        bubble.textContent = m.message;
-        thread.appendChild(bubble);
-        if (scroll) thread.scrollTop = thread.scrollHeight;
-    }
-
-    function sendCurrentMessage() {
-        const input = $('messageInput');
-        const value = input.value.trim();
-        if (!value || !currentConvNumber) return;
-        post('sendMessage', { to: currentConvNumber, message: value });
-        input.value = '';
-    }
-    $('sendMessageBtn').addEventListener('click', sendCurrentMessage);
-    $('messageInput').addEventListener('keyup', (e) => { if (e.key === 'Enter') sendCurrentMessage(); });
-
-    // ═══════════════════════════ SOCIAL FEEDS ═════════════════════════
-    function openFeed(app) {
-        currentFeedApp = app;
-        const cfg = socialAppsCfg[app] || { label: app, allowImage: false, maxLength: 280 };
-        showScreen('feed', cfg.label);
-        $('postContent').setAttribute('maxlength', cfg.maxLength || 280);
-        $('postContent').placeholder = `Post to ${cfg.label}...`;
-        $('postImage').classList.toggle('hidden', !cfg.allowImage);
-        $('postContent').value = '';
-        $('postImage').value = '';
-        $('feedList').innerHTML = '';
-        post('getFeed', { app });
-    }
-
-    function renderFeed(app, posts) {
-        if (app !== currentFeedApp) return;
-        feeds[app] = posts;
-        drawFeed();
-    }
-
-    function drawFeed() {
-        const list = $('feedList');
-        list.innerHTML = '';
-        const posts = feeds[currentFeedApp] || [];
-        if (!posts.length) {
-            list.innerHTML = '<div class="empty-state">Nothing posted yet.</div>';
-            return;
-        }
-        posts.forEach((p) => {
-            const card = document.createElement('div');
-            card.className = 'post-card';
-            card.innerHTML = `
-                <div class="post-author">${escapeHtml(p.author_name)}</div>
-                ${p.content ? `<div class="post-content">${escapeHtml(p.content)}</div>` : ''}
-                ${p.image_url ? `<img class="post-image" src="${escapeHtml(p.image_url)}">` : ''}
-                <div class="post-meta">
-                    <span>${timeAgo(typeof p.created === 'number' ? p.created : Math.floor(Date.now() / 1000))}</span>
-                    <span>
-                        <button class="post-like ${p.liked ? 'liked' : ''}" data-id="${p.id}">♥ ${p.likeCount || 0}</button>
-                        ${p.mine ? `<button class="post-delete" data-id="${p.id}">Delete</button>` : ''}
-                    </span>
-                </div>`;
-            card.querySelector('.post-like').addEventListener('click', () => post('likePost', { id: p.id }));
-            const del = card.querySelector('.post-delete');
-            if (del) del.addEventListener('click', () => post('deletePost', { id: p.id }));
-            list.appendChild(card);
-        });
-    }
-
-    $('postSubmitBtn').addEventListener('click', () => {
-        const content = $('postContent').value.trim();
-        const imageUrl = $('postImage').classList.contains('hidden') ? '' : $('postImage').value.trim();
-        if (!content && !imageUrl) return;
-        post('createPost', { app: currentFeedApp, content, imageUrl });
-        $('postContent').value = '';
-        $('postImage').value = '';
-    });
-
-    // ═══════════════════════════ GARAGES ══════════════════════════════
-    function openGarages() {
-        showScreen('garages', 'Garages');
-        post('getVehicles');
-    }
-
-    function renderVehicles(rows) {
-        vehicles = rows;
-        const list = $('garagesList');
-        list.innerHTML = '';
-        if (!rows.length) {
-            list.innerHTML = '<div class="empty-state">No vehicles registered to you.</div>';
-            return;
-        }
-        rows.forEach((v) => {
-            const card = document.createElement('div');
-            card.className = 'vehicle-card';
-            const stored = v.state === 1;
-            card.innerHTML = `
-                <div class="vehicle-top">
-                    <span class="vehicle-plate">${escapeHtml(v.plate)}</span>
-                    <span class="vehicle-state">${stored ? `Stored — ${escapeHtml(garageLabel(v.garage))}` : 'Out'}</span>
-                </div>
-                <div class="row-sub">${escapeHtml(v.vehicle)}</div>
-                <div class="vehicle-actions">
-                    ${stored
-                    ? `<button data-act="retrieve">Retrieve</button>`
-                    : `<select class="field-input" id="garageSelect-${v.plate}">${garagesCfg.map((g) => `<option value="${g.key}">${escapeHtml(g.label)}</option>`).join('')}</select> <button data-act="store">Store</button>`}
-                </div>`;
-            const btn = card.querySelector('button[data-act]');
-            if (btn.dataset.act === 'retrieve') {
-                btn.addEventListener('click', () => post('retrieveVehicle', { plate: v.plate, garageKey: v.garage }));
-            } else {
-                btn.addEventListener('click', () => {
-                    const sel = $(`garageSelect-${v.plate}`);
-                    post('storeVehicle', { plate: v.plate, garageKey: sel.value });
-                });
-            }
-            list.appendChild(card);
-        });
-    }
-
-    function garageLabel(key) {
-        const g = garagesCfg.find((x) => x.key === key);
-        return g ? g.label : (key || 'Unknown');
-    }
-
-    function money(n) { return `£${Number(n || 0).toLocaleString()}`; }
-
-    // ═══════════════════════════ BANK ═══════════════════════════════════
-    let bankFormOpen = false;
-    function openBank() {
-        bankFormOpen = false;
-        showScreen('bank', 'Bank');
-        post('getBankAccount');
-        post('getBankLog');
-    }
-
-    function renderBankAccount(account) {
-        $('bankCash').textContent = money(account.cash);
-        $('bankBalance').textContent = money(account.bank);
-    }
-
-    function renderBankLog(rows) {
-        const list = $('bankLogList');
-        list.innerHTML = '';
-        if (!rows.length) {
-            list.innerHTML = '<div class="empty-state">No activity yet.</div>';
-            return;
-        }
-        const labels = { deposit: 'Deposit', withdraw: 'Withdraw', transfer_out: 'Sent', transfer_in: 'Received' };
-        rows.forEach((r) => {
-            const row = document.createElement('div');
-            row.className = 'row-card no-hover';
-            row.innerHTML = `
-                <div class="row-main">
-                    <span class="row-title">${labels[r.type] || r.type}${r.other_party ? ` — ${escapeHtml(r.other_party)}` : ''}</span>
-                    <span class="row-sub">${timeAgo(Math.floor(new Date(r.created).getTime() / 1000) || Math.floor(Date.now() / 1000))} ago</span>
-                </div>
-                <span class="${r.type === 'deposit' || r.type === 'transfer_in' ? 'amount-in' : 'amount-out'}">
-                    ${r.type === 'deposit' || r.type === 'transfer_in' ? '+' : '-'}${money(r.amount)}
-                </span>`;
-            list.appendChild(row);
-        });
-    }
-
-    function bankPrompt(title, onConfirm, withNumber) {
-        if (bankFormOpen) return;
-        bankFormOpen = true;
-        const form = document.createElement('div');
-        form.className = 'inline-form';
-        form.innerHTML = `
-            ${withNumber ? '<input type="text" class="field-input" id="bankToNumber" placeholder="Recipient number" maxlength="15">' : ''}
-            <input type="text" class="field-input" id="bankAmountInput" placeholder="Amount" inputmode="numeric">
-            <div class="form-actions">
-                <button class="wide-btn" id="bankFormCancel">Cancel</button>
-                <button class="wide-btn call-btn" id="bankFormGo">${title}</button>
-            </div>`;
-        $('bankLogList').prepend(form);
-        $('bankFormCancel').addEventListener('click', () => { bankFormOpen = false; renderBankLog([]); post('getBankLog'); });
-        $('bankFormGo').addEventListener('click', () => {
-            const amount = parseInt($('bankAmountInput').value, 10);
-            if (!amount || amount <= 0) return;
-            const toNumber = withNumber ? $('bankToNumber').value.trim() : null;
-            bankFormOpen = false;
-            onConfirm(amount, toNumber);
-        });
-    }
-
-    $('bankDepositBtn').addEventListener('click', () => bankPrompt('Deposit', (amount) => post('bankDeposit', { amount })));
-    $('bankWithdrawBtn').addEventListener('click', () => bankPrompt('Withdraw', (amount) => post('bankWithdraw', { amount })));
-    $('bankTransferBtn').addEventListener('click', () => bankPrompt('Send', (amount, toNumber) => {
-        if (!toNumber) return;
-        post('bankTransfer', { amount, toNumber });
-    }, true));
-
-    // ═══════════════════════════ MAIL ═════════════════════════════════
-    let mailItems = [];
-    function openMail() {
-        showScreen('mail', 'Mail');
-        post('getMail');
-    }
-
-    function renderMail(rows) {
-        mailItems = rows;
-        drawMail();
-    }
-
-    function drawMail() {
-        const list = $('mailList');
-        list.innerHTML = '';
-        if (!mailItems.length) {
-            list.innerHTML = '<div class="empty-state">No mail.</div>';
-            return;
-        }
-        mailItems.forEach((m) => {
-            const card = document.createElement('div');
-            card.className = 'mail-card' + (m.is_read ? '' : ' mail-unread');
-            card.innerHTML = `
-                <div class="mail-top">
-                    <span class="row-title">${escapeHtml(m.subject)}</span>
-                    <button class="post-delete" data-act="del">✕</button>
-                </div>
-                <div class="row-sub">${escapeHtml(m.sender_label)}</div>
-                <div class="mail-body hidden">${escapeHtml(m.body)}</div>`;
-            card.addEventListener('click', (e) => {
-                if (e.target.dataset.act === 'del') return;
-                card.querySelector('.mail-body').classList.toggle('hidden');
-                if (!m.is_read) { m.is_read = 1; card.classList.remove('mail-unread'); post('readMail', { id: m.id }); }
-            });
-            card.querySelector('[data-act="del"]').addEventListener('click', (e) => {
-                e.stopPropagation();
-                post('deleteMail', { id: m.id });
-            });
-            list.appendChild(card);
-        });
-    }
-
-    // ═══════════════════════════ MARKETPLACE ══════════════════════════
-    let listings = [];
-    let listingFormOpen = false;
-    function openMarketplace() {
-        listingFormOpen = false;
-        showScreen('marketplace', 'Marketplace');
-        post('getMarketplace');
-    }
-
-    function renderMarketplace(rows) {
-        listings = rows;
-        drawMarketplace();
-    }
-
-    function drawMarketplace() {
-        const list = $('marketplaceList');
-        list.innerHTML = '';
-        if (!listings.length) {
-            list.innerHTML = '<div class="empty-state">No listings yet.</div>';
-            return;
-        }
-        listings.forEach((l) => {
-            const card = document.createElement('div');
-            card.className = 'post-card';
-            card.innerHTML = `
-                <div class="post-author">${escapeHtml(l.title)} — <span class="amount-in">${money(l.price)}</span></div>
-                ${l.description ? `<div class="post-content">${escapeHtml(l.description)}</div>` : ''}
-                ${l.image_url ? `<img class="post-image" src="${escapeHtml(l.image_url)}">` : ''}
-                <div class="post-meta">
-                    <span>${escapeHtml(l.seller_name)}</span>
-                    <span>
-                        ${l.mine ? `<button class="post-delete" data-act="del">Delete</button>` : `<button class="post-like" data-act="msg">Message Seller</button>`}
-                    </span>
-                </div>`;
-            const delBtn = card.querySelector('[data-act="del"]');
-            if (delBtn) delBtn.addEventListener('click', () => post('deleteListing', { id: l.id }));
-            const msgBtn = card.querySelector('[data-act="msg"]');
-            if (msgBtn) msgBtn.addEventListener('click', () => openConversation(l.seller_number, l.seller_name));
-            list.appendChild(card);
-        });
-    }
-
-    $('newListingBtn').addEventListener('click', () => {
-        if (listingFormOpen) return;
-        listingFormOpen = true;
-        const form = document.createElement('div');
-        form.className = 'inline-form';
-        form.innerHTML = `
-            <input type="text" class="field-input" id="listingTitle" placeholder="Title" maxlength="80">
-            <input type="text" class="field-input" id="listingPrice" placeholder="Price" inputmode="numeric">
-            <input type="text" class="field-input" id="listingDesc" placeholder="Description (optional)">
-            <input type="text" class="field-input" id="listingImage" placeholder="Image URL (optional)">
-            <div class="form-actions">
-                <button class="wide-btn" id="listingCancel">Cancel</button>
-                <button class="wide-btn call-btn" id="listingSave">Post</button>
-            </div>`;
-        $('marketplaceList').prepend(form);
-        $('listingCancel').addEventListener('click', () => { listingFormOpen = false; drawMarketplace(); });
-        $('listingSave').addEventListener('click', () => {
-            const title = $('listingTitle').value.trim();
-            const price = parseInt($('listingPrice').value, 10);
-            if (!title || !price) return;
-            post('createListing', {
-                title, price,
-                description: $('listingDesc').value.trim(),
-                imageUrl: $('listingImage').value.trim(),
-            });
-            listingFormOpen = false;
-        });
-    });
-
-    // ═══════════════════════════ NOTES ═════════════════════════════════
-    let notes = [];
-    function openNotes() {
-        showScreen('notes', 'Notes');
-        post('getNotes');
-    }
-
-    function renderNotes(rows) {
-        notes = rows;
-        drawNotes();
-    }
-
-    function drawNotes() {
-        const list = $('notesList');
-        list.innerHTML = '';
-        if (!notes.length) {
-            list.innerHTML = '<div class="empty-state">No notes saved.</div>';
-            return;
-        }
-        notes.forEach((n) => {
-            const card = document.createElement('div');
-            card.className = 'row-card note-card';
-            card.innerHTML = `
-                <div class="row-main"><span class="row-sub note-text">${escapeHtml(n.content)}</span></div>
-                <div class="row-actions"><button data-act="edit">✎</button><button data-act="del">✕</button></div>`;
-            card.querySelector('[data-act="del"]').addEventListener('click', (e) => {
-                e.stopPropagation();
-                post('deleteNote', { id: n.id });
-            });
-            card.querySelector('[data-act="edit"]').addEventListener('click', (e) => {
-                e.stopPropagation();
-                const form = document.createElement('div');
-                form.className = 'inline-form';
-                form.innerHTML = `
-                    <textarea class="field-input note-textarea" id="editNoteContent" maxlength="2000">${escapeHtml(n.content)}</textarea>
-                    <div class="form-actions">
-                        <button class="wide-btn" id="editNoteCancel">Cancel</button>
-                        <button class="wide-btn call-btn" id="editNoteSave">Save</button>
-                    </div>`;
-                card.replaceWith(form);
-                $('editNoteCancel').addEventListener('click', drawNotes);
-                $('editNoteSave').addEventListener('click', () => {
-                    const content = $('editNoteContent').value.trim();
-                    if (!content) return;
-                    post('saveNote', { id: n.id, content });
-                });
-            });
-            list.appendChild(card);
-        });
-    }
-
-    $('newNoteBtn').addEventListener('click', () => {
-        const form = document.createElement('div');
-        form.className = 'inline-form';
-        form.innerHTML = `
-            <textarea class="field-input note-textarea" id="newNoteContent" placeholder="Write a note..." maxlength="2000"></textarea>
-            <div class="form-actions">
-                <button class="wide-btn" id="newNoteCancel">Cancel</button>
-                <button class="wide-btn call-btn" id="newNoteSave">Save</button>
-            </div>`;
-        $('notesList').prepend(form);
-        $('newNoteCancel').addEventListener('click', drawNotes);
-        $('newNoteSave').addEventListener('click', () => {
-            const content = $('newNoteContent').value.trim();
-            if (!content) return;
-            post('saveNote', { content });
-        });
-    });
-
-    // ═══════════════════════════ CRYPTO ═════════════════════════════════
-    let cryptoData = null;
-    let cryptoPollTimer = null;
-    function openCrypto() {
-        showScreen('crypto', 'Crypto');
-        post('getCrypto');
-        if (cryptoPollTimer) clearInterval(cryptoPollTimer);
-        cryptoPollTimer = setInterval(() => { if (screen === 'crypto') post('getCrypto'); }, 10000);
-    }
-
-    function renderCrypto(data) {
-        cryptoData = data;
-        $('cryptoName').textContent = `${data.coinName} (${data.ticker})`;
-        $('cryptoPrice').textContent = `£${Number(data.price).toFixed(2)}`;
-        $('cryptoHoldings').textContent = `You hold ${Number(data.holdings).toFixed(4)} ${data.ticker}`;
-        drawSparkline(data.history || []);
-    }
-
-    function drawSparkline(history) {
-        const svg = $('cryptoSpark');
-        if (!history.length) { svg.innerHTML = ''; return; }
-        const min = Math.min(...history), max = Math.max(...history);
-        const range = (max - min) || 1;
-        const step = 280 / Math.max(1, history.length - 1);
-        const points = history.map((p, i) => `${(i * step).toFixed(1)},${(60 - ((p - min) / range) * 56 - 2).toFixed(1)}`).join(' ');
-        const rising = history[history.length - 1] >= history[0];
-        svg.innerHTML = `<polyline points="${points}" fill="none" stroke="${rising ? '#2E8B57' : '#C4453A'}" stroke-width="2"/>`;
-    }
-
-    $('cryptoBuyBtn').addEventListener('click', () => {
-        const amount = parseFloat($('cryptoAmount').value);
-        if (!amount || amount <= 0) return;
-        post('cryptoBuy', { amount });
-        $('cryptoAmount').value = '';
-    });
-    $('cryptoSellBtn').addEventListener('click', () => {
-        const amount = parseFloat($('cryptoAmount').value);
-        if (!amount || amount <= 0) return;
-        post('cryptoSell', { amount });
-        $('cryptoAmount').value = '';
-    });
-
-    // ═══════════════════════════ GALLERY ═════════════════════════════════
-    function openGallery() {
-        showScreen('gallery', 'Gallery');
-        post('getGallery');
-    }
-
-    function renderGallery(rows) {
-        const grid = $('galleryGrid');
-        grid.innerHTML = '';
-        if (!rows.length) {
-            grid.innerHTML = '<div class="empty-state">Nothing saved yet.</div>';
-            return;
-        }
-        rows.forEach((g) => {
-            const tile = document.createElement('div');
-            tile.className = 'gallery-tile';
-            tile.innerHTML = `<img src="${escapeHtml(g.image_url)}"><button class="gallery-del" data-id="${g.id}">✕</button>${g.caption ? `<span class="gallery-caption">${escapeHtml(g.caption)}</span>` : ''}`;
-            tile.querySelector('.gallery-del').addEventListener('click', () => post('deleteGalleryItem', { id: g.id }));
-            grid.appendChild(tile);
-        });
-    }
-
-    let galleryFormOpen = false;
-    $('newGalleryBtn').addEventListener('click', () => {
-        if (galleryFormOpen) return;
-        galleryFormOpen = true;
-        const form = document.createElement('div');
-        form.className = 'inline-form gallery-form';
-        form.innerHTML = `
-            <input type="text" class="field-input" id="galleryUrl" placeholder="Image URL" maxlength="255">
-            <input type="text" class="field-input" id="galleryCaption" placeholder="Caption (optional)" maxlength="150">
-            <div class="form-actions">
-                <button class="wide-btn" id="galleryCancel">Cancel</button>
-                <button class="wide-btn call-btn" id="gallerySave">Save</button>
-            </div>`;
-        $('galleryGrid').prepend(form);
-        $('galleryCancel').addEventListener('click', () => { galleryFormOpen = false; form.remove(); });
-        $('gallerySave').addEventListener('click', () => {
-            const url = $('galleryUrl').value.trim();
-            if (!url) return;
-            post('saveToGallery', { imageUrl: url, caption: $('galleryCaption').value.trim() });
-            galleryFormOpen = false;
-        });
-    });
-
-    // ═══════════════════════════ SETTINGS ════════════════════════════════
-    let currentWallpaper = 'default';
-    function applyWallpaper(key, customUrl) {
-        currentWallpaper = key || 'default';
-        $('phone').className = $('phone').className.replace(/\bwallpaper-\S+/g, '').trim();
-        const home = $('screen-home');
-        if (currentWallpaper === 'custom' && customUrl) {
-            home.style.backgroundImage = `linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.1) 40%), url("${customUrl.replace(/"/g, '')}")`;
-            home.style.backgroundSize = 'cover';
-            home.style.backgroundPosition = 'center';
+    function onLockTap(e) {
+        if (e.target.closest('.lock-bottom')) return;
+        if (HD.state.settings.hasPasscode) {
+            showPasscodeEntry();
         } else {
-            home.style.backgroundImage = '';
-            $('phone').classList.add(`wallpaper-${currentWallpaper}`);
+            unlockToHome();
         }
     }
 
-    function openSettings() {
-        showScreen('settings', 'Settings');
-        post('getSettings');
-    }
-
-    function renderSettings(data) {
-        applyWallpaper(data.wallpaper, data.customWallpaperUrl);
-        $('settingsMyNumber').textContent = myNumber || '—';
-        $('noCallerIdToggle').checked = !!data.noCallerId;
-
-        const grid = $('wallpaperGrid');
-        grid.innerHTML = '';
-        (data.wallpapers || []).forEach((w) => {
-            const tile = document.createElement('button');
-            tile.className = 'wallpaper-tile wallpaper-' + w.key + (w.key === currentWallpaper ? ' selected' : '');
-            tile.innerHTML = `<span>${escapeHtml(w.label)}</span>`;
-            tile.addEventListener('click', () => post('saveSettings', { wallpaper: w.key }));
-            grid.appendChild(tile);
+    function showPasscodeEntry() {
+        document.getElementById('lock-hint').classList.add('hidden');
+        const area = document.getElementById('lock-passcode-area');
+        area.innerHTML = `
+            <div class="passcode-entry">
+                <div style="font-size:13px;opacity:0.85;">Enter your passcode</div>
+                <div class="passcode-dots" id="lock-dots"></div>
+                <div class="keypad" id="lock-keypad">
+                    ${[1,2,3,4,5,6,7,8,9].map((n) => `<button data-key="${n}">${n}</button>`).join('')}
+                    <div class="keypad-empty"></div>
+                    <button data-key="0">0</button>
+                    <button data-key="back">⌫</button>
+                </div>
+            </div>`;
+        renderLockDots();
+        document.getElementById('lock-keypad').querySelectorAll('button').forEach((btn) => {
+            btn.onclick = (ev) => {
+                ev.stopPropagation();
+                const key = btn.dataset.key;
+                if (key === 'back') lockEntry = lockEntry.slice(0, -1);
+                else if (lockEntry.length < 4) lockEntry += key;
+                renderLockDots();
+                if (lockEntry.length === 4) {
+                    post('verifyPasscode', { passcode: lockEntry }).then(() => {});
+                }
+            };
         });
     }
+    function renderLockDots() {
+        const dots = document.getElementById('lock-dots');
+        if (!dots) return;
+        dots.innerHTML = [0, 1, 2, 3].map((i) => `<div class="dot ${i < lockEntry.length ? 'filled' : ''}"></div>`).join('');
+    }
+    HD.onPasscodeResult = function (ok) {
+        if (ok) { unlockToHome(); }
+        else { lockEntry = ''; renderLockDots(); toast('Incorrect passcode'); }
+    };
 
-    $('copyNumberBtn').addEventListener('click', () => {
-        if (!myNumber || !navigator.clipboard) return;
-        navigator.clipboard.writeText(myNumber).catch(() => {});
+    function unlockToHome() {
+        HD.state.locked = false;
+        renderHome();
+    }
+
+    // ═══════════════════════════ HOME SCREEN ══════════════════════════
+    function renderHome() {
+        const installedSet = new Set(HD.state.installedApps);
+        const homeApps = HD.state.apps.filter((a) => a.core || installedSet.has(a.id));
+        const dockApps = homeApps.filter((a) => a.dock);
+        const gridApps = homeApps.filter((a) => !a.dock);
+
+        showScreen('home', `
+            <div class="wallpaper-target" style="position:absolute;inset:0;z-index:-1;"></div>
+            <div class="app-grid">
+                ${gridApps.map((a) => appTile(a, { badge: a.id === 'messages' ? HD.state.unread.messages : 0 })).join('')}
+            </div>
+            <div id="dock">
+                ${dockApps.map((a) => appTile(a, { noLabel: true, badge: a.id === 'messages' ? HD.state.unread.messages : 0 })).join('')}
+            </div>
+        `);
+        document.getElementById('screen-home').addEventListener('click', (e) => {
+            const wrap = e.target.closest('[data-open-app]');
+            if (wrap) openApp(wrap.dataset.openApp);
+        });
+    }
+    HD.renderHome = renderHome;
+
+    // ═══════════════════════════ APP WINDOW ═══════════════════════════
+    let currentAppWindow = null;
+    function openApp(appId) {
+        const app = HD.state.apps.find((a) => a.id === appId);
+        if (!app) return;
+        const handler = window.HDApps && window.HDApps[appId] ? window.HDApps[appId] : window.HDApps.placeholder;
+        const win = document.createElement('div');
+        win.className = 'app-window';
+        win.id = 'app-window-' + appId;
+        document.getElementById('screen-' + HD.state.currentScreen).appendChild(win);
+        currentAppWindow = win;
+        handler.open(win, app);
+    }
+    HD.openApp = openApp;
+    HD.closeApp = function () {
+        if (currentAppWindow) { currentAppWindow.remove(); currentAppWindow = null; }
+    };
+    HD.backBar = function (title, onBack) {
+        return `<div class="app-topbar"><div class="back-btn" id="app-back">${chevronSvg()} Back</div><h2>${title}</h2><div style="width:50px;"></div></div>`;
+    };
+    function chevronSvg() { return `<svg width="10" height="16" viewBox="0 0 10 16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M8 1 1.5 8 8 15"/></svg>`; }
+    HD.bindBack = function (win) {
+        const btn = win.querySelector('#app-back');
+        if (btn) btn.onclick = () => HD.closeApp();
+    };
+
+    // ═══════════════════════════ CONTROL CENTER ═══════════════════════
+    function renderControlCenter() {
+        const cc = document.getElementById('control-center');
+        cc.classList.remove('hidden');
+        cc.innerHTML = `
+            <div class="cc-panel" id="cc-panel">
+                <div class="cc-row">
+                    <div class="cc-toggle ${HD.state.airplaneMode ? 'active' : ''}" data-cc="airplane">${airplaneSvg()}<span>Airplane</span></div>
+                    <div class="cc-toggle ${HD.state.dnd ? 'active' : ''}" data-cc="dnd">${dndSvg()}<span>Focus</span></div>
+                    <div class="cc-toggle ${HD.state.settings.noCallerId ? 'active' : ''}" data-cc="hideid">${hideIdSvg()}<span>Hide Number</span></div>
+                    <div class="cc-toggle ${HD.state.settings.receiveDrop ? 'active' : ''}" data-cc="drop">${dropSvg()}<span>Receive Drop</span></div>
+                </div>
+                <div class="cc-music">
+                    <div style="width:34px;height:34px;border-radius:8px;background:var(--border);"></div>
+                    <div class="info"><b>Not Playing</b><span>HD Music</span></div>
+                    <div class="controls">${prevSvg()}${playSvg()}${nextSvg()}</div>
+                </div>
+                <div class="cc-slider-row">${brightnessSvg()}<input type="range" class="cc-slider" id="cc-brightness" min="30" max="100" value="${HD.state.brightness}"></div>
+                <div class="cc-slider-row">${volumeSvg()}<input type="range" class="cc-slider" id="cc-volume" min="0" max="100" value="${HD.state.volume}"></div>
+                <div class="cc-quick-row">
+                    <div class="cc-quick-btn" data-open-app="camera">${cameraQuickSvg()}</div>
+                    <div class="cc-quick-btn ${HD.state.flashlight ? 'active' : ''}" data-cc="flashlight">${flashlightSvgDark()}</div>
+                </div>
+            </div>`;
+        cc.onclick = (e) => {
+            if (e.target === cc) closeControlCenter();
+            const toggle = e.target.closest('[data-cc]');
+            if (toggle) handleCcToggle(toggle.dataset.cc);
+            const appOpen = e.target.closest('[data-open-app]');
+            if (appOpen) { closeControlCenter(); openApp(appOpen.dataset.openApp); }
+        };
+        document.getElementById('cc-brightness').oninput = (e) => {
+            HD.state.brightness = +e.target.value;
+            document.getElementById('screen').style.filter = `brightness(${0.55 + (HD.state.brightness / 100) * 0.45})`;
+        };
+        document.getElementById('cc-volume').oninput = (e) => { HD.state.volume = +e.target.value; };
+    }
+    function handleCcToggle(kind) {
+        if (kind === 'airplane') HD.state.airplaneMode = !HD.state.airplaneMode;
+        if (kind === 'dnd') HD.state.dnd = !HD.state.dnd;
+        if (kind === 'flashlight') HD.state.flashlight = !HD.state.flashlight;
+        if (kind === 'hideid') { HD.state.settings.noCallerId = !HD.state.settings.noCallerId; post('setNoCallerId', { enabled: HD.state.settings.noCallerId }); }
+        if (kind === 'drop') { HD.state.settings.receiveDrop = !HD.state.settings.receiveDrop; post('setReceiveDrop', { enabled: HD.state.settings.receiveDrop }); }
+        renderControlCenter();
+    }
+    function closeControlCenter() { document.getElementById('control-center').classList.add('hidden'); HD.state.ccOpen = false; }
+    function airplaneSvg() { return `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 16v-2l-8-5V4.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2.5 1.5V22l4-1 4 1v-1.5L13 19v-5.5Z"/></svg>`; }
+    function dndSvg() { return `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm5 11H7v-2h10Z"/></svg>`; }
+    function hideIdSvg() { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3l18 18M10.6 5.1A10.9 10.9 0 0 1 12 5c5 0 9 3.5 10 7a12 12 0 0 1-2.2 3.9M6.6 6.6C4.5 8 3 10 2 12c1 3.5 5 7 10 7 1.3 0 2.5-.2 3.6-.6M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>`; }
+    function dropSvg() { return `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 5 9a7 7 0 1 0 14 0Z"/></svg>`; }
+    function prevSvg() { return `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 10-6v12z"/></svg>`; }
+    function playSvg() { return `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7Z"/></svg>`; }
+    function nextSvg() { return `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM4.5 6l10 6-10 6Z"/></svg>`; }
+    function brightnessSvg() { return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>`; }
+    function volumeSvg() { return `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 10v4h4l5 5V5L7 10Z"/><path d="M16 8.5a5 5 0 0 1 0 7" stroke="currentColor" stroke-width="2" fill="none"/></svg>`; }
+    function flashlightSvgDark() { return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 2h6l-1 6h2l-7 12 1-8H8Z"/></svg>`; }
+
+    document.getElementById('sb-toggle').addEventListener('click', () => {
+        HD.state.ccOpen = !HD.state.ccOpen;
+        if (HD.state.ccOpen) renderControlCenter(); else closeControlCenter();
     });
 
-    $('noCallerIdToggle').addEventListener('change', (e) => {
-        post('saveSettings', { noCallerId: e.target.checked });
-    });
+    // ═══════════════════════════ CALL OVERLAY ═════════════════════════
+    HD.showIncomingCall = function (call) {
+        HD.state.activeCall = call;
+        const overlay = document.getElementById('call-overlay');
+        overlay.classList.remove('hidden');
+        overlay.innerHTML = `
+            <div class="call-avatar">${(call.name || '?').charAt(0)}</div>
+            <div class="call-name">${call.name || 'Unknown'}</div>
+            <div class="call-status">Incoming call…</div>
+            <div class="call-actions">
+                <div class="call-action"><div class="circle decline" id="call-decline">${hangupSvg()}</div>Decline</div>
+                <div class="call-action"><div class="circle answer" id="call-answer">${answerSvg()}</div>Accept</div>
+            </div>`;
+        document.getElementById('call-decline').onclick = () => { post('declineCall', { callId: call.callId }); hideCallOverlay(); };
+        document.getElementById('call-answer').onclick = () => { post('answerCall', { callId: call.callId }); };
+    };
+    HD.showOutgoingCall = function (name, callId) {
+        HD.state.activeCall = { callId, name };
+        const overlay = document.getElementById('call-overlay');
+        overlay.classList.remove('hidden');
+        overlay.innerHTML = `
+            <div class="call-avatar">${(name || '?').charAt(0)}</div>
+            <div class="call-name">${name || 'Unknown'}</div>
+            <div class="call-status" id="call-status-text">Calling…</div>
+            <div class="call-actions">
+                <div class="call-action"><div class="circle decline" id="call-hangup">${hangupSvg()}</div>End</div>
+            </div>`;
+        document.getElementById('call-hangup').onclick = () => {
+            post('endCall', { callId: HD.state.activeCall && HD.state.activeCall.callId });
+            hideCallOverlay();
+        };
+    };
+    HD.callConnected = function () {
+        const statusText = document.getElementById('call-status-text');
+        if (statusText) statusText.textContent = 'Connected';
+        const status = document.querySelector('#call-overlay .call-status');
+        if (status) status.textContent = 'Connected';
+    };
+    HD.hideCallOverlay = hideCallOverlay;
+    function hideCallOverlay() {
+        HD.state.activeCall = null;
+        document.getElementById('call-overlay').classList.add('hidden');
+    }
+    function hangupSvg() { return `<svg width="26" height="26" viewBox="0 0 24 24" fill="#fff" style="transform:rotate(135deg)"><path d="M12 5c-4.5 0-8.4 1.5-11.3 4a1.5 1.5 0 0 0-.2 2l2 2.5a1.5 1.5 0 0 0 2 .3l2.5-1.7a1.2 1.2 0 0 0 .5-1.3l-.6-2.2A14 14 0 0 1 12 8c1.9 0 3.7.3 5.4.9l-.6 2a1.2 1.2 0 0 0 .5 1.3l2.5 1.8a1.5 1.5 0 0 0 2-.3l2-2.6a1.5 1.5 0 0 0-.2-2C20.4 6.5 16.5 5 12 5Z"/></svg>`; }
+    function answerSvg() { return `<svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2a1.5 1.5 0 0 1 1.5-.4c1.2.4 2.5.6 3.9.6a1.5 1.5 0 0 1 1.5 1.5v3.6a1.5 1.5 0 0 1-1.5 1.5C10.5 22 2 13.5 2 3.7A1.5 1.5 0 0 1 3.5 2.2h3.6A1.5 1.5 0 0 1 8.6 3.7c0 1.4.2 2.7.6 3.9.1.5 0 1.1-.4 1.5Z"/></svg>`; }
 
-    $('customWallpaperSave').addEventListener('click', () => {
-        const url = $('customWallpaperUrl').value.trim();
-        if (!url) return;
-        post('saveSettings', { customWallpaperUrl: url });
-    });
+    // ═══════════════════════════ AIRDROP OFFER ════════════════════════
+    HD.showAirdropOffer = function (name, number) {
+        const overlay = document.getElementById('call-overlay');
+        overlay.classList.remove('hidden');
+        overlay.style.background = 'linear-gradient(160deg, #0ea5e9, #1d4ed8 70%)';
+        overlay.innerHTML = `
+            <div class="call-avatar">${dropSvg()}</div>
+            <div class="call-name">${name || 'Someone'}</div>
+            <div class="call-status">wants to AirDrop their contact card</div>
+            <div class="call-actions">
+                <div class="call-action"><div class="circle decline" id="drop-decline">${hangupSvg()}</div>Decline</div>
+                <div class="call-action"><div class="circle answer" id="drop-accept">${answerSvg()}</div>Accept</div>
+            </div>`;
+        const close = () => { overlay.classList.add('hidden'); overlay.style.background = ''; };
+        document.getElementById('drop-decline').onclick = () => { post('airdropRespond', { accept: false }); close(); };
+        document.getElementById('drop-accept').onclick = () => { post('airdropRespond', { accept: true }); close(); };
+    };
 
-    // ═══════════════════════════ NUI MESSAGE ROUTER ═══════════════════
+    // ═══════════════════════════ NUI MESSAGE BUS ══════════════════════
     window.addEventListener('message', (event) => {
-        const d = event.data;
-        switch (d.action) {
+        const msg = event.data;
+        switch (msg.action) {
             case 'open':
-                myNumber = d.number;
-                garagesCfg = d.garages || [];
-                socialAppsCfg = d.socialApps || {};
-                $('myNumberTag').textContent = myNumber || '—';
-                $('phone').classList.remove('hidden');
-                openHome();
-                post('getSettings'); // applies the saved wallpaper immediately
-                post('getInstalledApps');
+                $app.classList.remove('hidden');
+                if (!HD.state.booted) { HD.state.booted = true; renderBoot(); }
                 break;
-
             case 'close':
-                $('phone').classList.add('hidden');
+                $app.classList.add('hidden');
                 break;
-
-            case 'contacts':
-                contacts = d.rows || [];
-                renderContacts();
+            case 'sync': {
+                const data = msg.args[0];
+                HD.state.number = data.number;
+                HD.state.name = data.name;
+                HD.state.settings = Object.assign(HD.state.settings, data.settings);
+                HD.state.installedApps = data.installedApps || [];
+                HD.state.apps = data.apps || [];
+                HD.state.wallpapers = data.wallpapers || [];
+                applyTheme();
                 break;
-
-            case 'threads':
-                renderThreads(d.rows || []);
+            }
+            case 'onboarded':
+                finishOnboarding();
                 break;
-
-            case 'conversation':
-                renderConversation(d.number, d.rows || []);
+            case 'passcodeResult':
+                HD.onPasscodeResult(msg.args[0]);
                 break;
-
-            case 'newMessage':
-                if (screen === 'conversation' && (d.msg.sender === currentConvNumber || d.msg.recipient === currentConvNumber)) {
-                    appendBubble(d.msg, true);
-                } else if (screen === 'messages') {
-                    post('getThreads');
-                }
+            case 'appInstalled':
+                if (!HD.state.installedApps.includes(msg.args[0])) HD.state.installedApps.push(msg.args[0]);
+                if (window.HDApps && window.HDApps.appstore && window.HDApps.appstore.refresh) window.HDApps.appstore.refresh();
                 break;
-
-            case 'callRinging':
-                if (activeCall) { activeCall.id = d.id; renderIncall(); }
+            case 'appRemoved':
+                HD.state.installedApps = HD.state.installedApps.filter((id) => id !== msg.args[0]);
+                if (window.HDApps && window.HDApps.appstore && window.HDApps.appstore.refresh) window.HDApps.appstore.refresh();
+                if (HD.state.currentScreen) renderHome();
                 break;
-
+            case 'ring':
+                document.body.dataset.ringing = '1';
+                break;
+            case 'stopRing':
+                delete document.body.dataset.ringing;
+                break;
             case 'incomingCall':
-                activeCall = { id: d.id, number: d.fromNumber, name: d.fromName || d.fromNumber, direction: 'incoming', status: 'ringing' };
-                showScreen('incall', 'Call');
-                renderIncall();
-                playRingtone();
+                HD.showIncomingCall(msg.args[0]);
                 break;
-
-            case 'callAnswered':
-                stopRingtone();
-                if (activeCall && activeCall.id === d.id) {
-                    activeCall.status = 'active';
-                    activeCall.startTs = Date.now();
-                    renderIncall();
-                    callTimer = setInterval(() => {
-                        if (!activeCall) return;
-                        const secs = Math.floor((Date.now() - activeCall.startTs) / 1000);
-                        $('incallStatus').textContent = `${String(Math.floor(secs / 60)).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}`;
-                    }, 1000);
-                }
+            case 'callRinging':
+                // phone.js already shows the outgoing-call overlay with the
+                // name it dialled the instant it posts startCall — this is
+                // just the server confirming the callId, so only fall back
+                // to a bare overlay if nothing's showing yet.
+                if (!HD.state.activeCall) HD.showOutgoingCall(null, msg.args[0].callId);
+                else HD.state.activeCall.callId = msg.args[0].callId;
                 break;
-
-            case 'callEnded': {
-                if (!activeCall || activeCall.id !== d.id) break;
-                const messages = { 'no-answer': 'No answer', declined: 'Call declined', ended: 'Call ended', disconnected: 'Call disconnected' };
-                endCallUI(messages[d.reason] || 'Call ended');
+            case 'callConnected':
+                HD.callConnected();
                 break;
-            }
-
-            case 'callFailed':
-                if (screen === 'incall') endCallUI(d.reason || 'Call failed');
+            case 'callEnded':
+                hideCallOverlay();
                 break;
-
-            case 'facetimeRinging':
-                if (activeFacetime) { activeFacetime.id = d.id; renderFacetime(); }
+            case 'airdropOffer':
+                HD.showAirdropOffer(msg.name, msg.number);
                 break;
-
-            case 'facetimeIncoming':
-                activeFacetime = { id: d.id, number: d.fromNumber, name: d.fromName || d.fromNumber, direction: 'incoming', status: 'ringing' };
-                showScreen('facetime-incall', 'FaceTime');
-                renderFacetime();
-                playRingtone();
-                break;
-
-            case 'facetimeAnswered':
-                stopRingtone();
-                if (activeFacetime && activeFacetime.id === d.id) {
-                    activeFacetime.status = 'active';
-                    ftIsOfferer = !!d.isOfferer;
-                    renderFacetime();
-                    ftBeginNegotiation();
-                }
-                break;
-
-            case 'facetimeSignal':
-                if (activeFacetime && activeFacetime.id === d.id) ftHandleSignal(d.signal);
-                break;
-
-            case 'facetimeEnded': {
-                if (!activeFacetime || activeFacetime.id !== d.id) break;
-                const ftMessages = { 'no-answer': 'No answer', declined: 'Declined', ended: 'Call ended', disconnected: 'Call disconnected' };
-                endFacetimeUI(ftMessages[d.reason] || 'Call ended');
-                break;
-            }
-
-            case 'facetimeFailed':
-                if (screen === 'facetime-incall') endFacetimeUI(d.reason || 'Call failed');
-                break;
-
-            case 'feed':
-                renderFeed(d.app, d.posts || []);
-                break;
-
-            case 'postCreated':
-                if (d.post.app === currentFeedApp) { feeds[currentFeedApp].unshift(d.post); drawFeed(); }
-                break;
-
-            case 'postLikeUpdated': {
-                const arr = feeds[currentFeedApp] || [];
-                const p = arr.find((x) => x.id === d.id);
-                if (p) { p.likeCount = d.likeCount; p.liked = d.liked; drawFeed(); }
-                break;
-            }
-
-            case 'postDeleted': {
-                feeds[currentFeedApp] = (feeds[currentFeedApp] || []).filter((x) => x.id !== d.id);
-                drawFeed();
-                break;
-            }
-
-            case 'vehicles':
-                renderVehicles(d.rows || []);
-                break;
-
-            case 'alertSound':
-                playAlert();
-                break;
-
-            case 'bankAccount':
-                renderBankAccount(d.account || { cash: 0, bank: 0 });
-                break;
-
-            case 'bankLog':
-                renderBankLog(d.rows || []);
-                break;
-
-            case 'mail':
-                renderMail(d.rows || []);
-                break;
-
-            case 'mailDeleted':
-                mailItems = mailItems.filter((m) => m.id !== d.id);
-                drawMail();
-                break;
-
-            case 'newMail':
-                if (screen === 'mail') post('getMail');
-                break;
-
-            case 'marketplace':
-                renderMarketplace(d.rows || []);
-                break;
-
-            case 'listingCreated':
-                listings.unshift(d.listing);
-                drawMarketplace();
-                break;
-
-            case 'listingDeleted':
-                listings = listings.filter((l) => l.id !== d.id);
-                drawMarketplace();
-                break;
-
-            case 'notes':
-                renderNotes(d.rows || []);
-                break;
-
-            case 'noteSaved':
-                { const i = notes.findIndex((n) => n.id === d.note.id);
-                if (i >= 0) notes[i] = d.note; else notes.unshift(d.note);
-                drawNotes(); }
-                break;
-
-            case 'noteDeleted':
-                notes = notes.filter((n) => n.id !== d.id);
-                drawNotes();
-                break;
-
-            case 'crypto':
-                renderCrypto(d.data);
-                break;
-
-            case 'gallery':
-                renderGallery(d.rows || []);
-                break;
-
-            case 'galleryItemAdded':
-                post('getGallery'); // simplest correct refresh, list is small
-                break;
-
-            case 'galleryItemDeleted':
-                post('getGallery');
-                break;
-
-            case 'settings':
-                renderSettings(d.data);
-                break;
-
-            case 'settingsSaved':
-                applyWallpaper(d.wallpaper, d.customWallpaperUrl);
-                if (screen === 'settings') post('getSettings');
-                break;
-
-            case 'installedApps':
-                installedApps = new Set(d.ids || []);
-                renderAppGrid();
-                if (screen === 'appstore') renderAppStore();
-                break;
-
-            case 'airdropIncoming':
-                showAirdropPrompt(d.data);
-                break;
+            default:
+                emit(msg.action, msg.args || [msg]);
         }
     });
 
-    document.addEventListener('keyup', (e) => {
-        if (e.key !== 'Escape') return;
-        if ($('phone').classList.contains('hidden')) return;
-        if (screen === 'incall') return; // must answer/decline/hang up, not dismiss
-        $('phone').classList.add('hidden');
-        post('close');
-    });
+    document.getElementById('toast').addEventListener('transitionend', () => {});
 })();

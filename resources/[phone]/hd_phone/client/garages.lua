@@ -1,66 +1,57 @@
 -- ═══════════════════════════════════════════════════════════════════
---  HD PHONE | GARAGES (client)
---  Actual vehicle spawn/despawn natives. Server already re-validates
---  ownership, state and proximity before ever sending these events —
---  this file just carries out what the server approved.
+--  HD PHONE | GARAGES (CLIENT)
+--  Store needs to be inside the vehicle to read its live health;
+--  retrieve just needs to be at the garage. Both re-validated
+--  server-side regardless of what this file reports.
 -- ═══════════════════════════════════════════════════════════════════
 
-local function TrimPlate(p)
-    return (p or ''):gsub('%s+$', ''):gsub('^%s+', '')
-end
+local function TrimPlate(p) return (p or ''):gsub('%s+$', ''):gsub('^%s+', '') end
 
 RegisterNUICallback('storeVehicle', function(data, cb)
     local ped = PlayerPedId()
-    local veh = GetVehiclePedIsIn(ped, false)
-    if veh == 0 or TrimPlate(GetVehicleNumberPlateText(veh)) ~= TrimPlate(data.plate) then
-        Config.Notify('Get in the vehicle you want to store first.', 'error')
-        cb({})
+    if not IsPedInAnyVehicle(ped, false) then
+        cb({ ok = false, reason = 'Get in the vehicle first.' })
         return
     end
-    TriggerServerEvent('hd_phone:server:storeVehicle', {
-        plate = data.plate,
-        garageKey = data.garageKey,
-        netId = VehToNet(veh),
-        engine = GetVehicleEngineHealth(veh),
-        body = GetVehicleBodyHealth(veh),
-    })
-    cb({})
+    local veh = GetVehiclePedIsIn(ped, false)
+    if GetPedInVehicleSeat(veh, -1) ~= ped then
+        cb({ ok = false, reason = 'Only the driver can store this vehicle.' })
+        return
+    end
+    local plate = TrimPlate(GetVehicleNumberPlateText(veh))
+    local engine = GetVehicleEngineHealth(veh)
+    local body = GetVehicleBodyHealth(veh)
+    TriggerServerEvent('hd_phone:server:storeVehicle', plate, data.garageKey, engine, body)
+    cb({ ok = true })
 end)
 
 RegisterNUICallback('retrieveVehicle', function(data, cb)
-    TriggerServerEvent('hd_phone:server:retrieveVehicle', { plate = data.plate, garageKey = data.garageKey })
-    cb({})
+    TriggerServerEvent('hd_phone:server:retrieveVehicle', data.plate, data.garageKey)
+    cb({ ok = true })
 end)
 
-RegisterNetEvent('hd_phone:client:despawnVehicle', function(netId)
-    if not netId then return end
-    local veh = NetToVeh(netId)
-    if veh and veh ~= 0 and DoesEntityExist(veh) then
-        SetEntityAsMissionEntity(veh, true, true)
-        DeleteVehicle(veh)
+RegisterNetEvent('hd_phone:client:vehicleStored', function(plate)
+    for _, veh in ipairs(GetGamePool('CVehicle')) do
+        if TrimPlate(GetVehicleNumberPlateText(veh)) == plate then
+            DeleteEntity(veh)
+            break
+        end
     end
 end)
 
-RegisterNetEvent('hd_phone:client:spawnVehicle', function(data)
+RegisterNetEvent('hd_phone:client:vehicleRetrieved', function(data)
     local hash = GetHashKey(data.model)
     RequestModel(hash)
     local waited = 0
     while not HasModelLoaded(hash) and waited < 5000 do Wait(50) waited = waited + 50 end
-    if not HasModelLoaded(hash) then
-        Config.Notify('Could not load that vehicle model.', 'error')
-        return
-    end
+    if not HasModelLoaded(hash) then return end
 
-    local spawn = data.spawn
-    local veh = CreateVehicle(hash, spawn.x, spawn.y, spawn.z, spawn.w, true, false)
-    SetEntityAsMissionEntity(veh, true, true)
-    SetVehicleOnGroundProperly(veh)
+    local veh = CreateVehicle(hash, data.coords.x, data.coords.y, data.coords.z, data.coords.w, true, false)
     SetVehicleNumberPlateText(veh, data.plate)
-    SetVehicleFuelLevel(veh, (data.fuel or 100) + 0.0)
-    SetVehicleEngineHealth(veh, (data.engine or 1000) + 0.0)
-    SetVehicleBodyHealth(veh, (data.body or 1000) + 0.0)
+    SetVehicleEngineHealth(veh, data.engine + 0.0)
+    SetVehicleBodyHealth(veh, data.body + 0.0)
+    SetVehicleFuelLevel(veh, 100.0)
+    SetVehicleOnGroundProperly(veh)
     SetModelAsNoLongerNeeded(hash)
-
-    TaskWarpPedIntoVehicle(PlayerPedId(), veh, -1)
-    Config.Notify(('%s retrieved.'):format(data.plate), 'success')
+    SendNUIMessage({ action = 'vehicleSpawned', plate = data.plate })
 end)

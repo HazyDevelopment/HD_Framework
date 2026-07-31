@@ -1,94 +1,68 @@
 -- ═══════════════════════════════════════════════════════════════════
---  HD PHONE | SOCIAL (Wire / Picta / Loopz)
---  One table, `app` column tells them apart. Feeds aren't pushed live
---  to everyone viewing them — a poster's own client gets their new
---  post/like instantly, everyone else sees it on their next refresh.
---  That matches how most FiveM phone social apps behave and avoids
---  tracking who currently has which app open.
+--  HD PHONE | WIRE / PICTA / LOOPZ (social feeds)
+--  Same table, `app` column distinguishes feeds — public, likes,
+--  no follow graph (same simplified shape as the previous build).
 -- ═══════════════════════════════════════════════════════════════════
+
+local VALID_APPS = { wire = true, picta = true, loopz = true }
+
+local function CheckImageHost(url)
+    if not url or url == '' then return true end
+    for _, host in ipairs(Config.ImageHostWhitelist) do
+        if url:find(host, 1, true) then return true end
+    end
+    return false
+end
 
 RegisterNetEvent('hd_phone:server:getFeed', function(app)
     local src = source
-    local Player = Framework.Functions.GetPlayer(src)
-    if not Player or not Config.SocialApps[app] then return end
-
+    if not VALID_APPS[app] then return end
     local posts = MySQL.query.await([[
-        SELECT p.*, (SELECT COUNT(*) FROM hd_phone_post_likes l WHERE l.post_id = p.id) AS likeCount
-        FROM hd_phone_posts p WHERE p.app = ? ORDER BY p.created DESC LIMIT 50
-    ]], { app }) or {}
-
-    local myLikes = MySQL.query.await('SELECT post_id FROM hd_phone_post_likes WHERE citizenid = ?', {
-        Player.PlayerData.citizenid
-    }) or {}
-    local likedSet = {}
-    for _, r in ipairs(myLikes) do likedSet[r.post_id] = true end
-
-    for _, p in ipairs(posts) do
-        p.liked = likedSet[p.id] or false
-        p.mine = p.citizenid == Player.PlayerData.citizenid
-    end
-
+        SELECT p.*,
+            (SELECT COUNT(*) FROM hd_phone_post_likes WHERE post_id = p.id) AS likeCount,
+            EXISTS(SELECT 1 FROM hd_phone_post_likes WHERE post_id = p.id AND citizenid = ?) AS likedByMe
+        FROM hd_phone_posts p WHERE p.app = ? ORDER BY p.id DESC LIMIT 100
+    ]], { GetPlayerOrNil(src) and GetPlayerOrNil(src).PlayerData.citizenid or '', app }) or {}
     TriggerClientEvent('hd_phone:client:feed', src, app, posts)
 end)
 
-RegisterNetEvent('hd_phone:server:createPost', function(data)
+RegisterNetEvent('hd_phone:server:createPost', function(app, content, imageUrl)
     local src = source
-    local Player = Framework.Functions.GetPlayer(src)
-    if not Player or type(data) ~= 'table' then return end
-
-    local appCfg = Config.SocialApps[data.app]
-    if not appCfg then return end
-
-    local content = type(data.content) == 'string' and data.content:sub(1, appCfg.maxLength) or ''
-    local imageUrl = nil
-    if appCfg.allowImage and type(data.imageUrl) == 'string' and data.imageUrl ~= '' then
-        if not IsAllowedImageHost(data.imageUrl) then
-            TriggerClientEvent('HD:Client:Notify', src, 'That image host is not allowed.', 'error')
-            return
-        end
-        imageUrl = data.imageUrl:sub(1, 255)
+    local Player = GetPlayerOrNil(src)
+    if not Player or not VALID_APPS[app] then return end
+    content = type(content) == 'string' and content:sub(1, 300) or nil
+    imageUrl = type(imageUrl) == 'string' and imageUrl:sub(1, 255) or nil
+    if not CheckImageHost(imageUrl) then
+        Notify(src, 'That image host is not allowed.', 'error')
+        return
     end
+    if (not content or content == '') and (not imageUrl or imageUrl == '') then return end
 
-    if content == '' and not imageUrl then return end
-
-    local name = GetDisplayName(src)
-    local id = MySQL.insert.await(
-        'INSERT INTO hd_phone_posts (app, citizenid, author_name, content, image_url) VALUES (?, ?, ?, ?, ?)',
-        { data.app, Player.PlayerData.citizenid, name, content, imageUrl }
-    )
-
-    TriggerClientEvent('hd_phone:client:postCreated', src, {
-        id = id, app = data.app, citizenid = Player.PlayerData.citizenid, author_name = name,
-        content = content, image_url = imageUrl, created = os.time(), likeCount = 0, liked = false, mine = true,
+    local authorName = ('%s %s'):format(Player.PlayerData.charinfo.firstname or '', Player.PlayerData.charinfo.lastname or '')
+    MySQL.insert('INSERT INTO hd_phone_posts (app, citizenid, author_name, content, image_url) VALUES (?, ?, ?, ?, ?)', {
+        app, Player.PlayerData.citizenid, authorName, content, imageUrl
     })
+    TriggerClientEvent('hd_phone:client:postCreated', -1, app)
 end)
 
-RegisterNetEvent('hd_phone:server:likePost', function(postId)
+RegisterNetEvent('hd_phone:server:toggleLike', function(postId)
     local src = source
-    local Player = Framework.Functions.GetPlayer(src)
-    if not Player or not postId then return end
+    local Player = GetPlayerOrNil(src)
+    if not Player then return end
     local citizenid = Player.PlayerData.citizenid
-
-    local existing = MySQL.scalar.await('SELECT 1 FROM hd_phone_post_likes WHERE post_id = ? AND citizenid = ?', { postId, citizenid })
-    if existing then
+    local liked = MySQL.scalar.await('SELECT 1 FROM hd_phone_post_likes WHERE post_id = ? AND citizenid = ?', { postId, citizenid })
+    if liked then
         MySQL.query.await('DELETE FROM hd_phone_post_likes WHERE post_id = ? AND citizenid = ?', { postId, citizenid })
     else
-        MySQL.insert.await('INSERT INTO hd_phone_post_likes (post_id, citizenid) VALUES (?, ?)', { postId, citizenid })
+        MySQL.query.await('INSERT IGNORE INTO hd_phone_post_likes (post_id, citizenid) VALUES (?, ?)', { postId, citizenid })
     end
-
-    local count = MySQL.scalar.await('SELECT COUNT(*) FROM hd_phone_post_likes WHERE post_id = ?', { postId }) or 0
-    TriggerClientEvent('hd_phone:client:postLikeUpdated', src, postId, count, not existing)
+    local count = MySQL.scalar.await('SELECT COUNT(*) FROM hd_phone_post_likes WHERE post_id = ?', { postId })
+    TriggerClientEvent('hd_phone:client:likeUpdated', src, postId, count, not liked)
 end)
 
 RegisterNetEvent('hd_phone:server:deletePost', function(postId)
     local src = source
-    local Player = Framework.Functions.GetPlayer(src)
-    if not Player or not postId then return end
-
-    local row = MySQL.single.await('SELECT citizenid FROM hd_phone_posts WHERE id = ?', { postId })
-    if not row then return end
-    if row.citizenid ~= Player.PlayerData.citizenid and not IsPlayerAceAllowed(src, 'hd.admin') then return end
-
-    MySQL.query.await('DELETE FROM hd_phone_posts WHERE id = ?', { postId })
-    TriggerClientEvent('hd_phone:client:postDeleted', src, postId)
+    local Player = GetPlayerOrNil(src)
+    if not Player then return end
+    MySQL.query.await('DELETE FROM hd_phone_posts WHERE id = ? AND citizenid = ?', { postId, Player.PlayerData.citizenid })
 end)

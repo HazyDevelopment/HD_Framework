@@ -6,208 +6,51 @@
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+    <div id="app" class="hidden">
+        <div id="device">
+            <div id="screen">
+                <div id="notch"></div>
 
-<div id="phone" class="hidden">
-    <div class="notch"></div>
+                <div id="statusbar">
+                    <span id="sb-time">9:41</span>
+                    <div class="sb-icons" id="sb-toggle">
+                        <svg id="sb-signal" width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="5" y="5" width="3" height="7" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+                        <svg id="sb-wifi" width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 10.5a1.4 1.4 0 1 1 0-2.8 1.4 1.4 0 0 1 0 2.8Zm-3.2-3.6a4.6 4.6 0 0 1 6.4 0l-1.3 1.3a2.8 2.8 0 0 0-3.8 0L4.8 6.9Zm-2.6-2.6a8.2 8.2 0 0 1 11.6 0l-1.3 1.3a6.4 6.4 0 0 0-9 0L2.2 4.3Z"/></svg>
+                        <svg id="sb-battery" width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="20" height="11" rx="2.5" stroke="currentColor"/><rect x="2" y="2" width="17" height="8" rx="1.3" fill="currentColor"/><rect x="21.5" y="4" width="2" height="4" rx="1" fill="currentColor"/></svg>
+                    </div>
+                </div>
 
-    <div class="airdrop-prompt hidden" id="airdropPrompt">
-        <span id="airdropFrom"></span>
-        <div class="row-actions">
-            <button class="store-btn" id="airdropAccept">Accept</button>
-            <button class="store-btn" id="airdropDecline">Decline</button>
+                <div id="screens"></div>
+
+                <div id="control-center" class="hidden"></div>
+                <div id="call-overlay" class="hidden"></div>
+                <div id="toast" class="hidden"></div>
+            </div>
         </div>
     </div>
 
-    <div class="statusbar">
-        <span id="clock">--:--</span>
-        <span class="statusbar-right">
-            <span id="myNumberTag">—</span>
-            <svg class="si si-signal" viewBox="0 0 18 12"><rect x="0" y="7" width="3" height="5" rx="0.5"/><rect x="5" y="5" width="3" height="7" rx="0.5"/><rect x="10" y="3" width="3" height="9" rx="0.5"/><rect x="15" y="0" width="3" height="12" rx="0.5"/></svg>
-            <svg class="si si-wifi" viewBox="0 0 18 14"><path d="M9 11.5a1.6 1.6 0 1 1 0 3.2 1.6 1.6 0 0 1 0-3.2Z"/><path d="M9 8c2 0 3.8.8 5.1 2.1l-1.8 1.8A4.3 4.3 0 0 0 9 10.6c-1.3 0-2.4.5-3.3 1.3l-1.8-1.8A7 7 0 0 1 9 8Z"/><path d="M9 3.8c3.3 0 6.3 1.3 8.5 3.5l-1.8 1.8A9.4 9.4 0 0 0 9 6.4a9.4 9.4 0 0 0-6.7 2.7L.5 7.3A11.9 11.9 0 0 1 9 3.8Z"/></svg>
-            <svg class="si si-battery" viewBox="0 0 25 12"><rect x="0.5" y="0.5" width="21" height="11" rx="2.5" fill="none" stroke="currentColor"/><rect x="2" y="2" width="18" height="8" rx="1.5"/><rect x="22.5" y="4" width="2" height="4" rx="1"/></svg>
-        </span>
-    </div>
-
-    <div class="navbar hidden" id="navbar">
-        <button class="back-chevron hidden" id="backBtn">‹</button>
-        <span class="navbar-title" id="screenTitle"></span>
-    </div>
-
-    <div class="content">
-
-        <!-- HOME — grid is built entirely from the APPS array in app.js -->
-        <section id="screen-home" class="screen">
-            <div class="app-grid" id="appGrid"></div>
-            <div class="dock" id="dock"></div>
-        </section>
-
-        <!-- APP STORE -->
-        <section id="screen-appstore" class="screen hidden">
-            <div class="list-title">Available Apps</div>
-            <div class="list" id="appstoreList"></div>
-        </section>
-
-        <!-- AIRDROP -->
-        <section id="screen-airdrop" class="screen hidden">
-            <div class="empty-state">Share your name and number with everyone nearby.</div>
-            <button class="wide-btn call-btn" id="airdropShareBtn">Share Nearby</button>
-        </section>
-
-        <!-- CONTACTS -->
-        <section id="screen-contacts" class="screen hidden">
-            <button class="wide-btn" id="addContactBtn">+ New Contact</button>
-            <div class="list" id="contactsList"></div>
-        </section>
-
-        <!-- DIALER -->
-        <section id="screen-dialer" class="screen hidden">
-            <input type="text" id="dialInput" class="dial-input" placeholder="Enter number" inputmode="numeric">
-            <div class="dialpad" id="dialpad"></div>
-            <button class="wide-btn call-btn" id="dialCallBtn">Call</button>
-        </section>
-
-        <!-- IN CALL -->
-        <section id="screen-incall" class="screen hidden">
-            <div class="incall-box">
-                <div class="incall-avatar">☎</div>
-                <div class="incall-name" id="incallName">—</div>
-                <div class="incall-status" id="incallStatus">Ringing...</div>
-                <div class="incall-actions" id="incallActions"></div>
-            </div>
-        </section>
-
-        <!-- FACETIME DIALER -->
-        <section id="screen-facetime" class="screen hidden">
-            <input type="text" id="ftDialInput" class="dial-input" placeholder="Enter number" inputmode="numeric">
-            <button class="wide-btn call-btn" id="ftCallBtn">FaceTime</button>
-        </section>
-
-        <!-- FACETIME IN CALL -->
-        <section id="screen-facetime-incall" class="screen hidden">
-            <div class="ft-videos">
-                <video id="ftRemoteVideo" class="ft-remote" autoplay playsinline></video>
-                <video id="ftLocalVideo" class="ft-local" autoplay muted playsinline></video>
-                <div class="ft-overlay-name" id="ftName">—</div>
-                <div class="ft-overlay-status" id="ftStatus">Calling...</div>
-            </div>
-            <div class="incall-actions" id="ftActions"></div>
-        </section>
-
-        <!-- MESSAGES (threads) -->
-        <section id="screen-messages" class="screen hidden">
-            <button class="wide-btn" id="newMessageBtn">+ New Message</button>
-            <div class="list" id="threadsList"></div>
-        </section>
-
-        <!-- CONVERSATION -->
-        <section id="screen-conversation" class="screen hidden">
-            <div class="conversation-thread" id="conversationThread"></div>
-            <div class="composer">
-                <input type="text" id="messageInput" placeholder="Message...">
-                <button id="sendMessageBtn">Send</button>
-            </div>
-        </section>
-
-        <!-- SOCIAL FEED (shared by wire/picta/loopz) -->
-        <section id="screen-feed" class="screen hidden">
-            <div class="composer social-composer">
-                <textarea id="postContent" maxlength="280" placeholder="What's happening?"></textarea>
-                <input type="text" id="postImage" class="hidden" placeholder="Image URL (optional)">
-                <button id="postSubmitBtn">Post</button>
-            </div>
-            <div class="list" id="feedList"></div>
-        </section>
-
-        <!-- GARAGES -->
-        <section id="screen-garages" class="screen hidden">
-            <div class="list" id="garagesList"></div>
-        </section>
-
-        <!-- BANK -->
-        <section id="screen-bank" class="screen hidden">
-            <div class="balance-card">
-                <div class="balance-row"><span>Cash</span><span id="bankCash">£0</span></div>
-                <div class="balance-row"><span>Bank</span><span id="bankBalance">£0</span></div>
-            </div>
-            <div class="bank-actions">
-                <button class="wide-btn" id="bankDepositBtn">Deposit</button>
-                <button class="wide-btn" id="bankWithdrawBtn">Withdraw</button>
-                <button class="wide-btn call-btn" id="bankTransferBtn">Transfer</button>
-            </div>
-            <div class="list-title">Recent Activity</div>
-            <div class="list" id="bankLogList"></div>
-        </section>
-
-        <!-- MAIL -->
-        <section id="screen-mail" class="screen hidden">
-            <div class="list" id="mailList"></div>
-        </section>
-
-        <!-- MARKETPLACE -->
-        <section id="screen-marketplace" class="screen hidden">
-            <button class="wide-btn" id="newListingBtn">+ New Listing</button>
-            <div class="list" id="marketplaceList"></div>
-        </section>
-
-        <!-- NOTES -->
-        <section id="screen-notes" class="screen hidden">
-            <button class="wide-btn" id="newNoteBtn">+ New Note</button>
-            <div class="list" id="notesList"></div>
-        </section>
-
-        <!-- CRYPTO -->
-        <section id="screen-crypto" class="screen hidden">
-            <div class="crypto-header">
-                <div class="crypto-name" id="cryptoName">—</div>
-                <div class="crypto-price" id="cryptoPrice">£0.00</div>
-            </div>
-            <div class="crypto-sparkline"><svg id="cryptoSpark" viewBox="0 0 280 60" preserveAspectRatio="none"></svg></div>
-            <div class="crypto-holdings" id="cryptoHoldings">You hold 0.0000</div>
-            <div class="bank-actions">
-                <input type="text" class="field-input crypto-input" id="cryptoAmount" placeholder="Amount (£ to buy / coins to sell)" inputmode="decimal">
-            </div>
-            <div class="bank-actions">
-                <button class="wide-btn call-btn" id="cryptoBuyBtn">Buy</button>
-                <button class="wide-btn" id="cryptoSellBtn">Sell</button>
-            </div>
-        </section>
-
-        <!-- GALLERY -->
-        <section id="screen-gallery" class="screen hidden">
-            <button class="wide-btn" id="newGalleryBtn">+ Save Image</button>
-            <div class="gallery-grid" id="galleryGrid"></div>
-        </section>
-
-        <!-- SETTINGS -->
-        <section id="screen-settings" class="screen hidden">
-            <div class="list-title">My Number</div>
-            <div class="row-card no-hover">
-                <div class="row-main"><span class="row-title" id="settingsMyNumber">—</span></div>
-                <div class="row-actions"><button class="store-btn" id="copyNumberBtn">Copy</button></div>
-            </div>
-
-            <div class="list-title">Privacy</div>
-            <div class="row-card no-hover">
-                <div class="row-main"><span class="row-title">No Caller ID</span><span class="row-sub">Hide your number on outgoing calls</span></div>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="noCallerIdToggle">
-                    <span class="toggle-track"></span>
-                </label>
-            </div>
-
-            <div class="list-title">Wallpaper</div>
-            <div class="wallpaper-grid" id="wallpaperGrid"></div>
-            <div class="inline-form">
-                <input type="text" class="field-input" id="customWallpaperUrl" placeholder="Custom wallpaper URL (Discord CDN, Imgur...)" maxlength="255">
-                <button class="wide-btn call-btn" id="customWallpaperSave">Set Custom Wallpaper</button>
-            </div>
-        </section>
-
-    </div>
-
-    <button class="home-indicator" id="homeBtn" aria-label="Home"></button>
-</div>
-
-<script src="js/app.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/apps/settings.js"></script>
+    <script src="js/apps/camera.js"></script>
+    <script src="js/apps/photos.js"></script>
+    <script src="js/apps/contacts.js"></script>
+    <script src="js/apps/phone.js"></script>
+    <script src="js/apps/messages.js"></script>
+    <script src="js/apps/social.js"></script>
+    <script src="js/apps/bank.js"></script>
+    <script src="js/apps/mail.js"></script>
+    <script src="js/apps/marketplace.js"></script>
+    <script src="js/apps/notes.js"></script>
+    <script src="js/apps/crypto.js"></script>
+    <script src="js/apps/matchup.js"></script>
+    <script src="js/apps/darkchat.js"></script>
+    <script src="js/apps/voicememo.js"></script>
+    <script src="js/apps/garages.js"></script>
+    <script src="js/apps/music.js"></script>
+    <script src="js/apps/facetime.js"></script>
+    <script src="js/apps/appstore.js"></script>
+    <script src="js/apps/maps.js"></script>
+    <script src="js/apps/clock.js"></script>
+    <script src="js/apps/placeholder.js"></script>
 </body>
 </html>

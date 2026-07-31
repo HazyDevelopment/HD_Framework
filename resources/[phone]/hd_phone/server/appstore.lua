@@ -1,53 +1,39 @@
 -- ═══════════════════════════════════════════════════════════════════
 --  HD PHONE | APP STORE
---  Core apps (Phone, Messages, Contacts, App Store, Settings) are
---  always available and never touch this table. Everything else is
---  install/uninstall gated per-citizen, validated against
---  Config.DownloadableApps so a tampered NUI callback can't "install"
---  an arbitrary id.
+--  Install/remove — validated against Config.Apps server-side so a
+--  tampered NUI callback can't install an arbitrary id. Core apps
+--  can't be removed; this is enforced here, not just hidden in the UI.
 -- ═══════════════════════════════════════════════════════════════════
 
-local function IsDownloadable(id)
-    for _, appId in ipairs(Config.DownloadableApps) do
-        if appId == id then return true end
+local function FindApp(appId)
+    for _, app in ipairs(Config.Apps) do
+        if app.id == appId then return app end
     end
-    return false
+    return nil
 end
 
-local function PushInstalledApps(src, citizenid)
-    local rows = MySQL.query.await('SELECT app_id FROM hd_phone_installed_apps WHERE citizenid = ?', { citizenid })
-    local ids = {}
-    for _, row in ipairs(rows) do ids[#ids + 1] = row.app_id end
-    TriggerClientEvent('hd_phone:client:installedApps', src, ids)
-end
-
-RegisterNetEvent('hd_phone:server:getInstalledApps', function()
+RegisterNetEvent('hd_phone:server:installApp', function(appId)
     local src = source
-    local Player = Framework.Functions.GetPlayer(src)
+    local Player = GetPlayerOrNil(src)
     if not Player then return end
-    PushInstalledApps(src, Player.PlayerData.citizenid)
+    local app = FindApp(appId)
+    if not app or app.core then return end
+
+    MySQL.insert.await('INSERT IGNORE INTO hd_phone_installed_apps (citizenid, app_id) VALUES (?, ?)', {
+        Player.PlayerData.citizenid, appId
+    })
+    TriggerClientEvent('hd_phone:client:appInstalled', src, appId)
 end)
 
-RegisterNetEvent('hd_phone:server:installApp', function(data)
+RegisterNetEvent('hd_phone:server:removeApp', function(appId)
     local src = source
-    local Player = Framework.Functions.GetPlayer(src)
-    if not Player or type(data) ~= 'table' or not IsDownloadable(data.id) then return end
+    local Player = GetPlayerOrNil(src)
+    if not Player then return end
+    local app = FindApp(appId)
+    if not app or app.core then return end
 
-    MySQL.query.await(
-        'INSERT IGNORE INTO hd_phone_installed_apps (citizenid, app_id) VALUES (?, ?)',
-        { Player.PlayerData.citizenid, data.id }
-    )
-    PushInstalledApps(src, Player.PlayerData.citizenid)
-end)
-
-RegisterNetEvent('hd_phone:server:uninstallApp', function(data)
-    local src = source
-    local Player = Framework.Functions.GetPlayer(src)
-    if not Player or type(data) ~= 'table' or not IsDownloadable(data.id) then return end
-
-    MySQL.query.await(
-        'DELETE FROM hd_phone_installed_apps WHERE citizenid = ? AND app_id = ?',
-        { Player.PlayerData.citizenid, data.id }
-    )
-    PushInstalledApps(src, Player.PlayerData.citizenid)
+    MySQL.update('DELETE FROM hd_phone_installed_apps WHERE citizenid = ? AND app_id = ?', {
+        Player.PlayerData.citizenid, appId
+    })
+    TriggerClientEvent('hd_phone:client:appRemoved', src, appId)
 end)

@@ -158,3 +158,102 @@ CREATE TABLE IF NOT EXISTS `hd_phone_installed_apps` (
 ALTER TABLE `hd_phone_settings`
     ADD COLUMN IF NOT EXISTS `no_caller_id` TINYINT NOT NULL DEFAULT 0,
     ADD COLUMN IF NOT EXISTS `custom_wallpaper_url` VARCHAR(255) NULL;
+
+-- ═══════════════════════════════════════════════════════════════════
+--  v1.4.0 — Clock and Maps need no table (Clock is client-only; Maps
+--  is a config-driven pin list plus a special message card sent
+--  through the existing hd_phone_messages table — see
+--  client/main.lua's location-message handling). Camera reuses
+--  hd_phone_gallery above rather than owning its own storage. Music,
+--  Dark Chat, Voice Memo, and Matchup each get their own table below.
+-- ═══════════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS `hd_phone_playlist` (
+    `id`        INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `citizenid` VARCHAR(50)  NOT NULL,
+    `video_id`  VARCHAR(20)  NOT NULL,
+    `title`     VARCHAR(150) NOT NULL,
+    `added`     TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `citizenid_idx` (`citizenid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Dark Chat identity is deliberately its own table, not a column on
+-- `players` — the alias is meant to be forgettable/regeneratable
+-- without touching the character's real data at all.
+CREATE TABLE IF NOT EXISTS `hd_phone_darkchat_identity` (
+    `citizenid` VARCHAR(50) NOT NULL,
+    `alias`     VARCHAR(30) NOT NULL,
+    PRIMARY KEY (`citizenid`),
+    UNIQUE KEY `alias_unique` (`alias`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `hd_phone_darkchat_messages` (
+    `id`        INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `sender`    VARCHAR(30)  NOT NULL, -- alias, not citizenid/number
+    `recipient` VARCHAR(30)  NOT NULL, -- alias, not citizenid/number
+    `message`   TEXT         NOT NULL,
+    `is_read`   TINYINT      NOT NULL DEFAULT 0,
+    `created`   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `sender_idx` (`sender`),
+    KEY `recipient_idx` (`recipient`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `hd_phone_voicememos` (
+    `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `citizenid`  VARCHAR(50)       NOT NULL,
+    `audio_data` MEDIUMTEXT        NOT NULL, -- base64 data: URL, capped client-side by Config.VoiceMemo.MaxDurationSeconds
+    `duration`   SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    `created`    TIMESTAMP         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `citizenid_idx` (`citizenid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `hd_phone_dating_profiles` (
+    `citizenid` VARCHAR(50)  NOT NULL,
+    `bio`       VARCHAR(200) NULL,
+    `photo_url` VARCHAR(255) NULL,
+    `active`    TINYINT      NOT NULL DEFAULT 1, -- off = not shown in anyone's swipe queue, profile data kept
+    `updated`   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`citizenid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- No separate "matches" table — a match is just both directions of
+-- this row existing with liked = 1 (checked live in server/dating.lua),
+-- which can't ever drift out of sync with the swipes themselves the
+-- way a derived table could.
+CREATE TABLE IF NOT EXISTS `hd_phone_dating_swipes` (
+    `citizenid`        VARCHAR(50) NOT NULL,
+    `target_citizenid` VARCHAR(50) NOT NULL,
+    `liked`             TINYINT    NOT NULL,
+    `created`           TIMESTAMP  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`citizenid`, `target_citizenid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ═══════════════════════════════════════════════════════════════════
+--  v2.0.0 — hd_phone rebuilt with a real onboarding wizard (language/
+--  appearance/passcode/HD ID account creation) and a Control Center.
+--  Reuses the existing per-citizen `hd_phone_settings` row rather than
+--  a new table for any of it.
+-- ═══════════════════════════════════════════════════════════════════
+ALTER TABLE `hd_phone_settings`
+    ADD COLUMN IF NOT EXISTS `email` VARCHAR(80) NULL,
+    ADD COLUMN IF NOT EXISTS `password_hash` VARCHAR(255) NULL,
+    ADD COLUMN IF NOT EXISTS `security_answer` VARCHAR(120) NULL,
+    ADD COLUMN IF NOT EXISTS `passcode` VARCHAR(4) NULL,
+    ADD COLUMN IF NOT EXISTS `dark_mode` TINYINT NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS `dynamic_mode` TINYINT NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS `receive_drop` TINYINT NOT NULL DEFAULT 1,
+    ADD COLUMN IF NOT EXISTS `onboarded` TINYINT NOT NULL DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS `hd_phone_call_log` (
+    `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `citizenid`  VARCHAR(50) NOT NULL, -- whose log this line appears on
+    `name`       VARCHAR(60) DEFAULT NULL,
+    `number`     VARCHAR(15) NOT NULL, -- other party
+    `direction`  ENUM('incoming','outgoing','missed') NOT NULL,
+    `created`    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `citizenid_idx` (`citizenid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

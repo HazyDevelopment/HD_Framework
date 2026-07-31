@@ -1,67 +1,87 @@
 -- ═══════════════════════════════════════════════════════════════════
 --  HD PHONE | SERVER CORE
---  Shared bridge + helpers every other server/*.lua module in this
---  resource uses. Phone numbers ARE charinfo.phone from HD_Framework
---  (generated once per character on creation) — nothing here
---  duplicates or reassigns numbers.
+--  Framework bootstrap, the phone-item→open hook, and the one big
+--  "sync" payload the NUI needs on open (account/settings state +
+--  installed apps) — everything else is per-app server/*.lua files.
 -- ═══════════════════════════════════════════════════════════════════
 
 Framework = nil
+
 CreateThread(function()
     while GetResourceState('HD_Framework') ~= 'started' do Wait(100) end
     Framework = exports['HD_Framework']:GetCoreObject()
-end)
-
-CreateThread(function()
-    Wait(1000)
-    local ok = pcall(function() MySQL.query.await('SELECT 1 FROM `hd_phone_messages` LIMIT 1') end)
+    local ok = pcall(function() MySQL.query.await('SELECT 1 FROM `hd_phone_settings` LIMIT 1') end)
     if not ok then
         print('^1[hd_phone] ============================================================^7')
         print('^1[hd_phone] DATABASE NOT INSTALLED.^7')
-        print('^1[hd_phone] Import sql/hd_phone_install.sql before using the phone.^7')
+        print('^1[hd_phone] Import sql/hd_phone_install.sql before using this resource.^7')
         print('^1[hd_phone] ============================================================^7')
     else
         print('^2[hd_phone]^7 Database verified. Ready.')
     end
 end)
 
-function GetPhoneNumber(src)
-    local Player = Framework.Functions.GetPlayer(src)
-    return Player and Player.PlayerData.charinfo.phone or nil
+function Notify(src, msg, ntype)
+    TriggerClientEvent('HD:Client:Notify', src, msg, ntype or 'info')
 end
 
-function GetDisplayName(src)
-    local Player = Framework.Functions.GetPlayer(src)
-    if not Player then return 'Unknown' end
-    local ci = Player.PlayerData.charinfo
-    return (ci.firstname or '?') .. ' ' .. (ci.lastname or '?')
+function GetPlayerOrNil(src)
+    if not Framework then return nil end
+    return Framework.Functions.GetPlayer(src)
 end
 
-function GetSourceByPhone(number)
-    for src, Player in pairs(Framework.Players) do
-        if Player.PlayerData.charinfo.phone == number then return src end
-    end
-    return nil
+-- ═══════════════════════════ SETTINGS / ACCOUNT ROW ══════════════════
+-- One row per citizen, created lazily the first time the phone opens.
+-- Holds onboarding state, HD ID credentials, passcode, and every
+-- Settings/Control-Center toggle — see sql/hd_phone_install.sql.
+function GetOrCreateSettings(citizenid)
+    local row = MySQL.single.await('SELECT * FROM hd_phone_settings WHERE citizenid = ?', { citizenid })
+    if row then return row end
+    MySQL.insert.await('INSERT IGNORE INTO hd_phone_settings (citizenid, wallpaper) VALUES (?, ?)', { citizenid, 'aurora' })
+    return MySQL.single.await('SELECT * FROM hd_phone_settings WHERE citizenid = ?', { citizenid })
 end
 
--- Shared by social.lua, marketplace.lua, gallery.lua — anywhere a
--- player submits an arbitrary image URL. Matches hazy_mdt's
--- Config.MugshotWhitelist convention.
-function IsAllowedImageHost(url)
-    if not Config.ImageHostWhitelist or #Config.ImageHostWhitelist == 0 then return true end
-    if type(url) ~= 'string' then return false end
-    local host = url:match('^https?://([^/]+)/?')
-    if not host then return false end
-    host = host:lower()
-    for _, allowed in ipairs(Config.ImageHostWhitelist) do
-        if host == allowed or host:sub(-(#allowed + 1)) == '.' .. allowed then return true end
-    end
-    return false
+local function InstalledAppIds(citizenid)
+    local rows = MySQL.query.await('SELECT app_id FROM hd_phone_installed_apps WHERE citizenid = ?', { citizenid }) or {}
+    local ids = {}
+    for _, r in ipairs(rows) do ids[#ids + 1] = r.app_id end
+    return ids
 end
 
-RegisterNetEvent('hd_phone:server:ready', function()
+-- ═══════════════════════════ OPEN / SYNC ═════════════════════════════
+RegisterNetEvent('hd_phone:server:sync', function()
     local src = source
-    local Player = Framework.Functions.GetPlayer(src)
+    local Player = GetPlayerOrNil(src)
     if not Player then return end
-    TriggerClientEvent('hd_phone:client:setNumber', src, Player.PlayerData.charinfo.phone)
+    local citizenid = Player.PlayerData.citizenid
+
+    local settings = GetOrCreateSettings(citizenid)
+    TriggerClientEvent('hd_phone:client:sync', src, {
+        number = Player.PlayerData.charinfo.phone,
+        name = (Player.PlayerData.charinfo.firstname or '') .. ' ' .. (Player.PlayerData.charinfo.lastname or ''),
+        settings = {
+            onboarded = settings.onboarded == 1,
+            email = settings.email,
+            wallpaper = settings.wallpaper,
+            customWallpaperUrl = settings.custom_wallpaper_url,
+            darkMode = settings.dark_mode == 1,
+            dynamicMode = settings.dynamic_mode == 1,
+            noCallerId = settings.no_caller_id == 1,
+            receiveDrop = settings.receive_drop == 1,
+            hasPasscode = settings.passcode ~= nil and settings.passcode ~= '',
+        },
+        installedApps = InstalledAppIds(citizenid),
+        apps = Config.Apps,
+        wallpapers = Config.Wallpapers,
+    })
+end)
+
+-- ═══════════════════════════ PHONE-ITEM → OPEN ═══════════════════════
+AddEventHandler('hd_inventory:server:onItemUsed', function(src, itemName)
+    local isPhone = false
+    for _, name in ipairs(Config.PhoneItems) do
+        if name == itemName then isPhone = true break end
+    end
+    if not isPhone then return end
+    TriggerClientEvent('hd_phone:client:open', src)
 end)

@@ -1,48 +1,43 @@
 -- ═══════════════════════════════════════════════════════════════════
 --  HD PHONE | NOTES
---  Simple private CRUD, citizenid-owned. No sharing/collaboration.
 -- ═══════════════════════════════════════════════════════════════════
+
+local function SendNotes(src, citizenid)
+    local rows = MySQL.query.await('SELECT * FROM hd_phone_notes WHERE citizenid = ? ORDER BY updated DESC', { citizenid }) or {}
+    TriggerClientEvent('hd_phone:client:notes', src, rows)
+end
 
 RegisterNetEvent('hd_phone:server:getNotes', function()
     local src = source
-    local Player = Framework.Functions.GetPlayer(src)
+    local Player = GetPlayerOrNil(src)
     if not Player then return end
-    local rows = MySQL.query.await(
-        'SELECT * FROM hd_phone_notes WHERE citizenid = ? ORDER BY updated DESC',
-        { Player.PlayerData.citizenid }
-    ) or {}
-    TriggerClientEvent('hd_phone:client:notes', src, rows)
+    SendNotes(src, Player.PlayerData.citizenid)
 end)
 
-RegisterNetEvent('hd_phone:server:saveNote', function(data)
+RegisterNetEvent('hd_phone:server:saveNote', function(id, content)
     local src = source
-    local Player = Framework.Functions.GetPlayer(src)
-    if not Player or type(data) ~= 'table' then return end
+    local Player = GetPlayerOrNil(src)
+    if not Player then return end
+    content = type(content) == 'string' and content:sub(1, 2000) or ''
+    local citizenid = Player.PlayerData.citizenid
 
-    local content = type(data.content) == 'string' and data.content:sub(1, Config.Notes.MaxLength) or ''
-    if content == '' then return end
-
-    if data.id then
-        MySQL.update('UPDATE hd_phone_notes SET content = ? WHERE id = ? AND citizenid = ?', {
-            content, data.id, Player.PlayerData.citizenid
-        })
-        TriggerClientEvent('hd_phone:client:noteSaved', src, { id = data.id, content = content, updated = os.time() })
+    if id then
+        MySQL.update('UPDATE hd_phone_notes SET content = ? WHERE id = ? AND citizenid = ?', { content, id, citizenid })
     else
-        local count = MySQL.scalar.await('SELECT COUNT(*) FROM hd_phone_notes WHERE citizenid = ?', { Player.PlayerData.citizenid }) or 0
+        local count = MySQL.scalar.await('SELECT COUNT(*) FROM hd_phone_notes WHERE citizenid = ?', { citizenid }) or 0
         if count >= Config.Notes.MaxPerPlayer then
-            return TriggerClientEvent('HD:Client:Notify', src, 'You have too many notes saved.', 'error')
+            Notify(src, 'You have reached your note limit.', 'error')
+            return
         end
-        local id = MySQL.insert.await('INSERT INTO hd_phone_notes (citizenid, content) VALUES (?, ?)', {
-            Player.PlayerData.citizenid, content
-        })
-        TriggerClientEvent('hd_phone:client:noteSaved', src, { id = id, content = content, created = os.time(), updated = os.time() })
+        MySQL.insert('INSERT INTO hd_phone_notes (citizenid, content) VALUES (?, ?)', { citizenid, content })
     end
+    SendNotes(src, citizenid)
 end)
 
 RegisterNetEvent('hd_phone:server:deleteNote', function(id)
     local src = source
-    local Player = Framework.Functions.GetPlayer(src)
-    if not Player or not id then return end
-    MySQL.query.await('DELETE FROM hd_phone_notes WHERE id = ? AND citizenid = ?', { id, Player.PlayerData.citizenid })
-    TriggerClientEvent('hd_phone:client:noteDeleted', src, id)
+    local Player = GetPlayerOrNil(src)
+    if not Player then return end
+    MySQL.update('DELETE FROM hd_phone_notes WHERE id = ? AND citizenid = ?', { id, Player.PlayerData.citizenid })
+    SendNotes(src, Player.PlayerData.citizenid)
 end)

@@ -20,6 +20,9 @@ add_ace group.admin command allow
 add_ace group.admin hd.admin allow
 add_principal identifier.license:CHANGEME group.admin
 
+# ── Branded loading screen — logo, UK RP slideshow, YouTube music ──
+ensure hd_loadingscreen
+
 ensure mapmanager
 ensure baseevents
 ensure chat
@@ -44,8 +47,14 @@ ensure pma-voice
 # ── HD_Framework core — standalone, no qb-core bridge ────────────────
 ensure HD_Framework
 
+# ── Spawn selector: last location / default, shown after char select ─
+ensure hd_spawn
+
 # ── Property ownership: starter flats + the real estate job ─────────
 ensure hd_housing
+
+# ── Wardrobe (/outfits) + clothing stores — stands in for qb-clothing ─
+ensure hd_clothing
 
 # ── Staff admin panel (/admin) — gated on hd.admin, same ACE as above ─
 ensure hd_admin
@@ -91,10 +100,13 @@ ensure hd_mechanic
 # ── Radio: pma-voice channels gated on the 'radio' item + UK PTT tone
 ensure hd_radio
 
-# ── Phone: Contacts, Messages, Calls (now real audio via pma-voice),
-#    Wire/Picta/Loopz, Garages ────────────────────────────────────────
+# ── Phone: Contacts, Messages, Calls/FaceTime (real audio/video via
+#    pma-voice/WebRTC), Wire/Picta/Loopz, Bank, Crypto, and more ──────
 ensure hd_phone
 
 # ── Civilian jobs: shift/contract loops + vehicle dealership ────────
 ensure hd_civjobs
 ensure hd_cardealer
+
+# ── Custom player + vehicle HUD, seatbelt system ────────────────────
+ensure hd_hud

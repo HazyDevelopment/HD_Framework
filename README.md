@@ -33,8 +33,8 @@ vehicles, economy, admin tools) talks to `HD_Framework` directly.
    - Phone Camera app: a Discord webhook URL in `hd_phone/config.lua`
      (`Config.Camera.WebhookUrl`).
 5. **Start the server.** Console should print `Database verified. Ready.`
-   from `HD_Framework`, `hd_inventory`, `hd_phone`, `hd_admin`,
-   `hd_mechanic`, `hd_housing`, and `hd_clothing`.
+   from `HD_Framework`, `hd_inventory`, `hd_admin`, `hd_mechanic`,
+   `hd_housing`, and `hd_clothing`.
 
 ## What's in this folder
 
@@ -61,7 +61,8 @@ resources/
   [dispatch]/
     hd_dispatch/    ← 999 calls + recovery calls
   [phone]/
-    hd_phone/       ← Contacts, Messages, Calls, social apps, Bank, Mail, Marketplace, Crypto, and more
+    hd_phone/       ← HD Phone: Contacts, Messages, Calls, FaceTime, social apps,
+                       Bank, Mail, Marketplace, Crypto, Matchup, Dark Chat, and more
   [civjobs]/
     hd_civjobs/     ← shift/contract loop for taxi/HGV/postal/waste/bus/reporter/estate agent
     hd_cardealer/   ← vehicle showroom
@@ -109,10 +110,14 @@ on duty and eligible.
 Downed players wait for an on-duty ambulance or `/revive`. See
 `hd_ems/README.md`.
 
-**Phone** — **M** to open. Contacts, Phone/FaceTime (real audio/video via
-pma-voice/WebRTC), Messages, social apps (Birdy/Instapics/Clipz), Bank,
-Mail, Marketplace, Crypto, Gallery, Maps, Music, Camera, and more — see
-the app list inside the phone itself or `hd_phone/config.lua`.
+**Phone** (`hd_phone`) — **M** to open. Real onboarding wizard (HD ID
+account, passcode), lock screen, and a Control Center (tap the status
+bar) with brightness/volume/airplane mode/Do Not Disturb/Hide Number/
+Receive Drop. Contacts, Phone/FaceTime (real audio/video via pma-voice/
+WebRTC), Messages, social apps (Wire/Picta/Loopz), Matchup (dating),
+Dark Chat, Bank, Crypto, Marketplace, Mail, Notes, Clock, Maps, Music,
+Voice Memo, Garages, Camera/Photos, and an App Store to install/remove
+the non-core apps.
 
 **Inventory** (`hd_inventory`) — **TAB** for your grid, **1-5** for the
 hotbar (hold **Z** to show it). `/glovebox`, `/trunk`, ground drops,
