@@ -16,6 +16,16 @@ local PlayerChannel = {} -- [src] = last tuned channel (remembered even while po
 local PlayerPower = {} -- [src] = true once they've powered the handheld on
 local PlayerPanicAt = {} -- [src] = GetGameTimer() of their last panic press, for the cooldown
 
+-- Using the radio item from the inventory should open the handheld UI,
+-- not just fire-and-vanish — items.lua marks 'radio' `consumable = false`
+-- so hd_inventory doesn't remove it on use; this is the other half,
+-- opening the NUI the same "use" action was supposed to do all along.
+AddEventHandler('hd_inventory:server:onItemUsed', function(src, itemName)
+    if itemName == Config.Item then
+        TriggerClientEvent('hd_radio:client:openRadio', src)
+    end
+end)
+
 local function HasRadioItem(src)
     if GetResourceState('hd_inventory') ~= 'started' then return true end -- degrade open if inventory isn't installed
     return exports['hd_inventory']:HasItem(src, Config.Item, 1)

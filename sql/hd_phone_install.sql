@@ -257,3 +257,22 @@ CREATE TABLE IF NOT EXISTS `hd_phone_call_log` (
     PRIMARY KEY (`id`),
     KEY `citizenid_idx` (`citizenid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ═══════════════════════════════════════════════════════════════════
+--  v2.1.0 — home screen icon reordering + Wire's own account gate
+--  (separate from the phone-wide HD ID: a username/password/profile
+--  picture, same as a real social app login, checked once per app
+--  open rather than baked into onboarding).
+-- ═══════════════════════════════════════════════════════════════════
+ALTER TABLE `hd_phone_settings`
+    ADD COLUMN IF NOT EXISTS `home_order` TEXT NULL; -- JSON { grid: [ids], dock: [ids] }
+
+CREATE TABLE IF NOT EXISTS `hd_phone_wire_accounts` (
+    `citizenid`     VARCHAR(50)  NOT NULL,
+    `username`      VARCHAR(30)  NOT NULL,
+    `password_hash` VARCHAR(255) NOT NULL,
+    `pfp_url`       VARCHAR(255) DEFAULT NULL,
+    `created`       TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`citizenid`),
+    UNIQUE KEY `username_unique` (`username`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

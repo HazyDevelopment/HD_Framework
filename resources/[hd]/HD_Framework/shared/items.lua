@@ -43,7 +43,7 @@ item('id_card', 'ID Card', 0, { unique = true, description = 'UK national identi
 item('driver_license', "Driving Licence", 0, { unique = true, description = 'UK driving licence' })
 
 -- ═══════════════════════════ POLICE LOADOUT ══════════════════════════
-item('radio', 'Radio', 200, { useable = true, description = 'Communications radio' })
+item('radio', 'Radio', 200, { useable = true, consumable = false, description = 'Communications radio' })
 item('handcuffs', 'Handcuffs', 250, { useable = true, description = 'Restrains a suspect' })
 item('armorplate', 'Armour Plate', 1000, { useable = true, image = 'armor.png', description = 'Protective ballistic plate' })
 

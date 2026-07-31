@@ -48,6 +48,13 @@ end
 RegisterCommand('hd_radio:openTuner', OpenRadio, false)
 RegisterKeyMapping('hd_radio:openTuner', 'Open handheld radio', 'keyboard', Config.OpenKey)
 
+-- Fired by server/main.lua's hd_inventory:server:onItemUsed hook —
+-- using the radio item from the inventory opens the exact same
+-- handheld UI as the U keybind, instead of doing nothing.
+RegisterNetEvent('hd_radio:client:openRadio', function()
+    if not radioOpen then OpenRadio() end
+end)
+
 RegisterNUICallback('tune', function(data, cb)
     TriggerServerEvent('hd_radio:server:setChannel', data.freq)
     cb({})
