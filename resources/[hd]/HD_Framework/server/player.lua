@@ -5,7 +5,7 @@
 --  Field names deliberately mirror the QBCore player object shape
 --  (PlayerData.citizenid / charinfo / job.grade.level / job.isboss,
 --  Functions.AddMoney/RemoveMoney/SetJob/SetJobDuty) so hazy_mdt and
---  uk_uhsjob (both call exports['HD_Framework']:GetCoreObject()
+--  hd_ems (both call exports['HD_Framework']:GetCoreObject()
 --  directly, no bridge resource) work against it with zero API
 --  changes. uk_policejob is compiled/escrowed and hardcoded to call
 --  exports['qb-core'] specifically, so it can't be reached this way —

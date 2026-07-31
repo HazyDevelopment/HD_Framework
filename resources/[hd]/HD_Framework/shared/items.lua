@@ -1,6 +1,6 @@
 -- ═══════════════════════════════════════════════════════════════════
 --  HD_FRAMEWORK | SHARED ITEMS
---  Starter item table — just enough for uk_policejob and uk_uhsjob's
+--  Starter item table — just enough for uk_policejob and hd_ems's
 --  rank loadouts (server/player.lua AddItem checks names against this
 --  table) plus basic civilian essentials, so nothing errors before
 --  the custom Quasar-style inventory resource (a later build phase)

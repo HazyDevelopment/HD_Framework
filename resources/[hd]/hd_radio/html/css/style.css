@@ -1,0 +1,293 @@
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-user-select: none; user-select: none; }
+html, body { width: 100%; height: 100%; background: transparent; overflow: hidden; font-family: 'Segoe UI', Arial, sans-serif; }
+
+/* ── Small always-visible chip, shown whenever the radio is on a channel and the handheld isn't open ── */
+#channelChip {
+    position: fixed;
+    left: 20px;
+    bottom: 90px;
+    background: rgba(10, 11, 14, 0.82);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    padding: 6px 12px;
+    color: #9FE39F;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    font-variant-numeric: tabular-nums;
+    display: none;
+}
+#channelChip.on { display: block; }
+#channelChip.talking { border-color: #D8892B; color: #D8892B; }
+
+/* ══════════════════════════ HANDHELD RADIO ══════════════════════════ */
+#radio {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.96);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    filter: drop-shadow(0 20px 45px rgba(0,0,0,0.65));
+}
+#radio.open {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.antenna {
+    position: absolute;
+    top: -78px;
+    right: 34px;
+    width: 10px;
+    height: 84px;
+    background: linear-gradient(90deg, #0a0a0c, #2b2c30 45%, #0a0a0c);
+    border-radius: 5px 5px 2px 2px;
+    box-shadow: inset -1px 0 2px rgba(255,255,255,0.08);
+}
+.antenna::after {
+    content: '';
+    position: absolute;
+    top: -14px;
+    left: -3px;
+    width: 16px;
+    height: 18px;
+    border-radius: 8px 8px 6px 6px;
+    background: linear-gradient(180deg, #3a3b40, #131316);
+}
+
+.body {
+    position: relative;
+    width: 250px;
+    padding: 18px 16px 16px;
+    border-radius: 22px;
+    background: linear-gradient(160deg, #3c3d42 0%, #232428 12%, #1a1b1e 55%, #101113 100%);
+    border: 1px solid rgba(255,255,255,0.06);
+    box-shadow:
+        inset 0 1px 1px rgba(255,255,255,0.15),
+        inset 0 -30px 40px rgba(0,0,0,0.35);
+}
+
+.panicBtn {
+    position: absolute;
+    top: 12px;
+    left: 16px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    background: radial-gradient(circle at 35% 30%, #ff9d3d, #d8892b 55%, #8a4f10 100%);
+    box-shadow: 0 2px 3px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.5);
+}
+.panicBtn:active { filter: brightness(0.85); }
+.panicBtn.flash { animation: panicFlash 0.5s ease-in-out infinite; }
+@keyframes panicFlash {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(224,74,74,0.7), 0 2px 3px rgba(0,0,0,0.5); }
+    50% { box-shadow: 0 0 0 8px rgba(224,74,74,0), 0 2px 3px rgba(0,0,0,0.5); }
+}
+
+.speakerGrille {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    display: flex;
+    gap: 3px;
+}
+.speakerGrille span {
+    width: 3px;
+    height: 16px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, #050506, #26272b);
+}
+
+.screen {
+    margin-top: 26px;
+    background: linear-gradient(175deg, #16241a, #0a130d);
+    border: 1px solid rgba(159, 227, 159, 0.18);
+    border-radius: 8px;
+    padding: 10px 12px 8px;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.6);
+}
+
+.statusRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #7FD87F;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+.statusIcons { display: flex; align-items: center; gap: 5px; }
+.bars, .batt { width: 15px; height: 11px; fill: #7FD87F; }
+.batt { width: 20px; }
+#battFill { fill: #7FD87F; }
+
+.freqRow {
+    text-align: center;
+    margin: 8px 0 4px;
+}
+#freqDigits {
+    color: #B6FFB6;
+    font-size: 32px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+    text-shadow: 0 0 10px rgba(182, 255, 182, 0.45);
+}
+.freqRow .unit {
+    color: rgba(182,255,182,0.55);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    margin-left: 4px;
+}
+
+.metaRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+    color: rgba(182,255,182,0.7);
+    letter-spacing: 0.04em;
+}
+.powerState {
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 4px;
+}
+.powerState.off { background: rgba(224,90,90,0.18); color: #E05A5A; }
+.powerState.on { background: rgba(127,216,127,0.18); color: #7FD87F; }
+
+.volRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 0 2px;
+}
+.volLabel {
+    color: rgba(237,237,237,0.55);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+#volSlider {
+    flex: 1;
+    accent-color: #4A9EFF;
+    cursor: pointer;
+}
+#volValue {
+    color: #EDEDED;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    width: 26px;
+    text-align: right;
+}
+
+.softkeys {
+    display: flex;
+    gap: 6px;
+    margin-top: 12px;
+}
+.softkey {
+    flex: 1;
+    border: none;
+    border-radius: 7px;
+    padding: 7px 0;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: #EDEDED;
+    background: linear-gradient(180deg, #2c2d31, #1b1c1f);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 1px 2px rgba(0,0,0,0.4);
+    cursor: pointer;
+}
+.softkey:active { filter: brightness(0.85); }
+.powerKey { color: #7FD87F; font-size: 14px; }
+
+.dpad {
+    position: relative;
+    width: 110px;
+    height: 110px;
+    margin: 14px auto 0;
+}
+.dpadBtn {
+    position: absolute;
+    border: none;
+    cursor: pointer;
+    color: #C9C9CC;
+    background: linear-gradient(180deg, #2c2d31, #1b1c1f);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 1px 2px rgba(0,0,0,0.4);
+    font-size: 11px;
+}
+.dpadBtn:active { filter: brightness(0.85); }
+.dpadUp { top: 0; left: 35px; width: 40px; height: 32px; border-radius: 8px 8px 3px 3px; }
+.dpadDown { bottom: 0; left: 35px; width: 40px; height: 32px; border-radius: 3px 3px 8px 8px; }
+.dpadLeft { left: 0; top: 39px; width: 32px; height: 32px; border-radius: 8px 3px 3px 8px; }
+.dpadRight { right: 0; top: 39px; width: 32px; height: 32px; border-radius: 3px 8px 8px 3px; }
+.dpadCenter {
+    top: 33px; left: 33px; width: 44px; height: 44px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #3a3b40, #101113 80%);
+    color: #7FD87F;
+    font-weight: 700;
+    font-size: 12px;
+    box-shadow: inset 0 1px 1px rgba(255,255,255,0.15), 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.keypad {
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 7px;
+}
+.key {
+    border: none;
+    border-radius: 8px;
+    padding: 9px 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: #EDEDED;
+    background: linear-gradient(180deg, #303136, #1c1d20);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 1px 2px rgba(0,0,0,0.4);
+    cursor: pointer;
+}
+.key:active { filter: brightness(0.8); }
+
+.callRow {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 14px;
+    padding: 0 6px;
+}
+.callBtn {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.25);
+}
+.callBtn:active { filter: brightness(0.85); }
+.callBtn svg { width: 20px; height: 20px; fill: #0a0a0a; }
+.callGreen { background: radial-gradient(circle at 35% 30%, #6FE38A, #2E9E4F 80%); }
+.callRed { background: radial-gradient(circle at 35% 30%, #F08080, #C23B3B 80%); }
+.callBtn.ring { animation: ringPulse 0.6s ease-in-out infinite; }
+@keyframes ringPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.12); }
+}
+
+.brand {
+    text-align: center;
+    margin-top: 14px;
+    color: rgba(237,237,237,0.3);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+}

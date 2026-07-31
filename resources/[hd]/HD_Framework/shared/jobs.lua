@@ -3,7 +3,7 @@
 --  Every job on the server, UK-themed end to end. Structure matches
 --  the QBCore convention exactly (label / type / defaultDuty /
 --  offDutyPay / grades[n] = { name, isboss, payment }) so every
---  QBCore-ecosystem resource (uk_policejob, uk_uhsjob, hazy_mdt,
+--  QBCore-ecosystem resource (uk_policejob, hd_ems, hazy_mdt,
 --  anything installed later) reads it with zero changes.
 --
 --  job.type is the important extension point beyond stock QBCore:
@@ -52,9 +52,8 @@ Jobs['police'] = {
     },
 }
 
--- Ranks match uk_uhsjob/config.lua's Config.Ranks exactly (0 = Student
--- Paramedic ... 9 = Operations Manager) — copied verbatim from
--- uk_uhsjob/qbcore_job.txt.
+-- Ranks match hd_ems/config.lua's Config.Ranks exactly (0 = Student
+-- Paramedic ... 9 = Operations Manager).
 Jobs['ambulance'] = {
     label = 'United Kingdom Health Service',
     type = 'ems',

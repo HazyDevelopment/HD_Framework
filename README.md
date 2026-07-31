@@ -18,8 +18,7 @@ vehicles, economy, admin tools) talks to `HD_Framework` directly.
    `hd_society_install.sql` → `hd_fines_install.sql` →
    `hd_admin_install.sql` → `hd_mechanic_install.sql` →
    `hd_housing_install.sql` → `hd_clothing_install.sql`.
-   Then also `resources/[mdt]/hazy_mdt/sql/install_qbcore.sql` and
-   `resources/[jobs]/uk_uhsjob/install_qbcore.sql`.
+   Then also `resources/[mdt]/hazy_mdt/sql/install_qbcore.sql`.
    Every statement is `IF NOT EXISTS` — safe to re-run if you're updating.
 3. **Copy `server.cfg.example` to `server.cfg`** (the real one is
    gitignored — never commit it). Fill in `sv_licenseKey`
@@ -38,42 +37,41 @@ vehicles, economy, admin tools) talks to `HD_Framework` directly.
 
 ## What's in this folder
 
+Every `hd_`/`HD_`-prefixed resource lives directly under `resources/[hd]/`
+— nothing HD-specific gets its own topic folder. The handful of
+non-`hd_` resources (the MDT, pma-voice) keep their own folders since
+they aren't ours to rename or fold in.
+
 ```
 resources/
   [hd]/
-    HD_Framework/   ← core: player data, money, jobs, saving, multicharacter
-    hd_spawn/       ← spawn point picker shown after character select
-    hd_admin/       ← staff panel, /admin, Discord-role gated
-    hd_clothing/    ← wardrobe (/outfits) + clothing stores
-    HD_vehiclekeys/ ← vehicle locking + shared keys
-    hd_society/     ← business funds (police/ambulance/cardealer wages)
-    hd_fines/       ← fines/invoices — feeds hd_society
-    hd_inventory/   ← grid inventory: player, hotbar, stashes, glovebox/trunk, drops
-    hd_shops/       ← 24/7-style convenience stores
-  [jobs]/
-    hd_policejob/   ← UK Police, hand-written against HD_Framework
-    hd_ems/         ← death/revive — replaces vanilla death entirely
-    uk_uhsjob/      ← UK Health Service job (armoury, garage, GPS, revive)
-  [housing]/
-    hd_housing/     ← starter flats + the real estate job
+    HD_Framework/     ← core: player data, money, jobs, saving, multicharacter
+    HD_vehiclekeys/   ← vehicle locking + shared keys
+    hd_admin/         ← staff panel, /admin, Discord-role gated
+    hd_cardealer/     ← vehicle showroom
+    hd_civjobs/       ← shift/contract loop for taxi/HGV/postal/waste/bus/reporter/estate agent
+    hd_clothing/      ← wardrobe (/outfits) + clothing stores
+    hd_dispatch/      ← 999 calls + recovery calls
+    hd_ems/           ← ambulance job: duty/ranks/armoury/garage/GPS/staff revive + death script
+    hd_fines/         ← fines/invoices — feeds hd_society
+    hd_housing/       ← starter flats + the real estate job
+    hd_hud/           ← player + vehicle HUD, seatbelt system
+    hd_inventory/     ← grid inventory: player, hotbar, stashes, glovebox/trunk, drops
+    hd_loadingscreen/ ← branded loading screen
+    hd_mechanic/      ← shop damage diagnostics, MOT/insurance, limp mode
+    hd_phone/         ← HD Phone: Contacts, Messages, Calls, FaceTime, social apps,
+                         Bank, Mail, Marketplace, Crypto, Matchup, Dark Chat, and more
+    hd_policejob/     ← UK Police, hand-written against HD_Framework
+    hd_radio/         ← pma-voice radio channels, UK-style PTT tone
+    hd_shops/         ← 24/7-style convenience stores
+    hd_society/       ← business funds (police/ambulance/cardealer wages)
+    hd_spawn/         ← spawn point picker shown after character select
   [mdt]/
-    hazy_mdt/       ← MDT
-  [dispatch]/
-    hd_dispatch/    ← 999 calls + recovery calls
-  [phone]/
-    hd_phone/       ← HD Phone: Contacts, Messages, Calls, FaceTime, social apps,
-                       Bank, Mail, Marketplace, Crypto, Matchup, Dark Chat, and more
-  [civjobs]/
-    hd_civjobs/     ← shift/contract loop for taxi/HGV/postal/waste/bus/reporter/estate agent
-    hd_cardealer/   ← vehicle showroom
-  [mechanic]/
-    hd_mechanic/    ← shop damage diagnostics, MOT/insurance, limp mode
+    hazy_mdt/         ← MDT
   [voice]/
-    hd_radio/       ← pma-voice radio channels, UK-style PTT tone
-  [hud]/
-    hd_hud/         ← player + vehicle HUD, seatbelt system
-sql/                ← install scripts, see Install above for order
-server.cfg.example   ← copy to server.cfg and fill in
+    pma-voice/        ← third-party voice plugin (not included) — hd_radio depends on it but lives in [hd]
+sql/                  ← install scripts, see Install above for order
+server.cfg.example     ← copy to server.cfg and fill in
 ```
 
 ## Resources at a glance
@@ -106,8 +104,11 @@ at `/admin`, gated on a Discord role — see Install step 4.
 `/recovery` for vehicle breakdowns, **F5** opens the board for whoever's
 on duty and eligible.
 
-**Death & Revive** (`hd_ems`) — replaces vanilla instant respawn.
-Downed players wait for an on-duty ambulance or `/revive`. See
+**Ambulance** (`hd_ems`) — the full UK Health Service job: clock in at
+Pillbox Hill, rank-locked equipment store and vehicle garage, live GPS
+of on-duty units (shared with police). Also replaces vanilla instant
+respawn entirely — downed players wait for an on-duty medic to revive
+them in person or for staff to run `/revive [id]`. See
 `hd_ems/README.md`.
 
 **Phone** (`hd_phone`) — **M** to open. Real onboarding wizard (HD ID

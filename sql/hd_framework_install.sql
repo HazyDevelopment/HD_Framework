@@ -3,9 +3,9 @@
 --  Import this BEFORE starting HD_Framework. Schema intentionally
 --  matches stock QBCore's `players` / `player_vehicles` shape
 --  (citizenid, charinfo JSON, metadata JSON, job JSON, money JSON) so
---  uk_policejob, uk_uhsjob, hazy_mdt and any off-the-shelf QBCore
---  resource work against it with zero changes via the qb-core bridge
---  resource.
+--  uk_policejob, hd_ems, hazy_mdt and any off-the-shelf QBCore-shaped
+--  resource work against it with zero changes — no bridge resource
+--  needed, they call exports['HD_Framework']:GetCoreObject() directly.
 -- ═══════════════════════════════════════════════════════════════════
 
 CREATE TABLE IF NOT EXISTS `players` (

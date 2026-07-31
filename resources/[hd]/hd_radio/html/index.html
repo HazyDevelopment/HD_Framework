@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>HD Radio</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="channelChip">
+    <span id="chipFreq">— MHz</span>
+</div>
+
+<div id="radio">
+    <div class="antenna"></div>
+
+    <div class="body">
+        <button id="panicBtn" class="panicBtn" title="Panic">
+            <span class="panicDot"></span>
+        </button>
+
+        <div class="speakerGrille">
+            <span></span><span></span><span></span><span></span><span></span>
+        </div>
+
+        <div class="screen">
+            <div class="statusRow">
+                <span class="statusIcons">
+                    <svg viewBox="0 0 16 12" class="bars"><rect x="0" y="7" width="2.5" height="5"/><rect x="4" y="5" width="2.5" height="7"/><rect x="8" y="3" width="2.5" height="9"/><rect x="12" y="1" width="2.5" height="11"/></svg>
+                    <span id="modeLabel">DIRECT</span>
+                </span>
+                <span class="statusIcons">
+                    <span id="battPct">100%</span>
+                    <svg viewBox="0 0 22 12" class="batt"><rect x="0.5" y="0.5" width="18" height="11" rx="2" fill="none" stroke="currentColor"/><rect x="19" y="4" width="2" height="4" fill="currentColor"/><rect id="battFill" x="2" y="2" width="14" height="8" fill="currentColor"/></svg>
+                </span>
+            </div>
+            <div class="freqRow">
+                <span id="freqDigits">--.--</span>
+                <span class="unit">MHz</span>
+            </div>
+            <div class="metaRow">
+                <span id="channelLabel">Off</span>
+                <span id="powerState" class="powerState off">OFF</span>
+            </div>
+        </div>
+
+        <div class="volRow">
+            <span class="volLabel">VOL</span>
+            <input id="volSlider" type="range" min="0" max="100" value="65">
+            <span id="volValue">65</span>
+        </div>
+
+        <div class="softkeys">
+            <button data-action="power" class="softkey powerKey">⏻</button>
+            <button data-action="off" class="softkey">OFF</button>
+            <button data-action="close" class="softkey">✕</button>
+        </div>
+
+        <div class="dpad">
+            <button data-nudge="1" class="dpadBtn dpadUp">▲</button>
+            <button data-nudge="-10" class="dpadBtn dpadLeft">◀</button>
+            <button data-action="tune" class="dpadBtn dpadCenter">OK</button>
+            <button data-nudge="10" class="dpadBtn dpadRight">▶</button>
+            <button data-nudge="-1" class="dpadBtn dpadDown">▼</button>
+        </div>
+
+        <div class="keypad">
+            <button class="key" data-digit="1">1</button>
+            <button class="key" data-digit="2">2</button>
+            <button class="key" data-digit="3">3</button>
+            <button class="key" data-digit="4">4</button>
+            <button class="key" data-digit="5">5</button>
+            <button class="key" data-digit="6">6</button>
+            <button class="key" data-digit="7">7</button>
+            <button class="key" data-digit="8">8</button>
+            <button class="key" data-digit="9">9</button>
+            <button class="key" data-action="clear">*</button>
+            <button class="key" data-digit="0">0</button>
+            <button class="key" data-action="tune">#</button>
+        </div>
+
+        <div class="callRow">
+            <button id="p2pBtn" class="callBtn callGreen" title="Direct call">
+                <svg viewBox="0 0 24 24"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.6.1.4 0 .8-.3 1l-2.2 2.2z"/></svg>
+            </button>
+            <button id="endBtn" class="callBtn callRed" title="End">
+                <svg viewBox="0 0 24 24"><path d="M12 8c-3 0-5.8.7-8.3 2-.5.3-.7.9-.5 1.4l1.2 3c.2.5.7.8 1.2.7 1.1-.2 2.2-.3 2.4-1.6l.3-1.7c1.1-.3 2.3-.4 3.7-.4s2.6.1 3.7.4l.3 1.7c.2 1.3 1.3 1.4 2.4 1.6.5.1 1-.2 1.2-.7l1.2-3c.2-.5 0-1.1-.5-1.4C17.8 8.7 15 8 12 8z"/></svg>
+            </button>
+        </div>
+
+        <div class="brand">HD RADIO</div>
+    </div>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
