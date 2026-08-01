@@ -4,12 +4,17 @@
     const resourceName = (typeof GetParentResourceName === 'function') ? GetParentResourceName() : 'hd_clothing';
     const $ = (id) => document.getElementById(id);
 
+    // Returns the parsed response body — cycle/removeProp's NUI callback
+    // replies with the freshly-updated category list (client/main.lua's
+    // cb(CategoryPayload())), which the caller needs to actually repaint
+    // the control bar with the new drawable/texture number instead of
+    // leaving it showing whatever it was at open.
     function post(action, data) {
-        fetch(`https://${resourceName}/${action}`, {
+        return fetch(`https://${resourceName}/${action}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json; charset=UTF-8' },
             body: JSON.stringify(data || {}),
-        }).catch(() => {});
+        }).then((r) => r.json()).catch(() => null);
     }
 
     function escapeHtml(str) {
@@ -88,17 +93,6 @@
         }
     }
 
-    function cycle(field, delta) {
-        if (!selectedId) return;
-        post('cycle', { id: selectedId, field, delta });
-    }
-
-    $('ctrlDrawablePrev').addEventListener('click', () => cycle('drawable', -1));
-    $('ctrlDrawableNext').addEventListener('click', () => cycle('drawable', 1));
-    $('ctrlTexturePrev').addEventListener('click', () => cycle('texture', -1));
-    $('ctrlTextureNext').addEventListener('click', () => cycle('texture', 1));
-    $('ctrlRemove').addEventListener('click', () => { if (selectedId) post('removeProp', { id: selectedId }); });
-
     function applyCategories(list) {
         categories = list || [];
         if (!selectedId || !findCategory(selectedId)) {
@@ -107,6 +101,20 @@
         renderSidebar();
         renderControlBar();
     }
+
+    function cycle(field, delta) {
+        if (!selectedId) return;
+        post('cycle', { id: selectedId, field, delta }).then((list) => { if (list) applyCategories(list); });
+    }
+
+    $('ctrlDrawablePrev').addEventListener('click', () => cycle('drawable', -1));
+    $('ctrlDrawableNext').addEventListener('click', () => cycle('drawable', 1));
+    $('ctrlTexturePrev').addEventListener('click', () => cycle('texture', -1));
+    $('ctrlTextureNext').addEventListener('click', () => cycle('texture', 1));
+    $('ctrlRemove').addEventListener('click', () => {
+        if (!selectedId) return;
+        post('removeProp', { id: selectedId }).then((list) => { if (list) applyCategories(list); });
+    });
 
     // ═══════════════════════════ OUTFITS TAB ═════════════════════════════
     function renderOutfits(list) {
