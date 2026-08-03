@@ -322,6 +322,18 @@ RegisterNetEvent('HD:Client:OnPlayerLoaded', function()
     TriggerServerEvent('hd_clothing:server:getMyClothing')
 end)
 
+-- Brand-new character (HD_Framework only fires this once, right after
+-- character creation, never on a relog) — force the free wardrobe open
+-- so a citizen customises their look before doing anything else. Same
+-- OpenWardrobe(nil) as /outfits, no charge; Close still works normally
+-- once they're happy with it.
+RegisterNetEvent('HD:Client:NewCharacterSpawned', function()
+    CreateThread(function()
+        Wait(500) -- let the screen fade-in/positioning from ConfirmSpawn settle first
+        OpenWardrobe(nil)
+    end)
+end)
+
 -- ═══════════════════════════ STORE PEDS ════════════════════════════════
 local storePeds = {}
 

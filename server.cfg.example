@@ -47,6 +47,9 @@ ensure pma-voice
 # ── HD_Framework core — standalone, no qb-core bridge ────────────────
 ensure HD_Framework
 
+# ── F1 interaction wheel: GPS/Interactions/Walkstyle/General/Work/Emotes ─
+ensure hd_radial
+
 # ── Spawn selector: last location / default, shown after char select ─
 ensure hd_spawn
 
@@ -103,6 +106,11 @@ ensure hd_mechanic
 
 # ── Radio: pma-voice channels gated on the 'radio' item + UK PTT tone
 ensure hd_radio
+
+# ── screenshot-basic: powers the phone Camera app's shutter. Official
+#    CitizenFX resource, builds itself from source on first start —
+#    give it a moment on that very first boot. Must load before hd_phone.
+ensure screenshot-basic
 
 # ── Phone: Contacts, Messages, Calls/FaceTime (real audio/video via
 #    pma-voice/WebRTC), Wire/Picta/Loopz, Bank, Crypto, and more ──────

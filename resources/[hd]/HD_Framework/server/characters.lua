@@ -19,7 +19,7 @@ function SendCharacterList(src, license)
             jobLabel = job and job.label or 'Unemployed',
         }
     end
-    TriggerClientEvent('hd:client:showCharacterSelect', src, list, Config.MaxCharacterSlots)
+    TriggerClientEvent('hd:client:showCharacterSelect', src, list, Config.MaxCharacterSlots, Config.Nationalities)
 end
 
 RegisterNetEvent('hd:server:selectCharacter', function(citizenid)
@@ -56,6 +56,17 @@ end)
 
 local function ValidName(name)
     return type(name) == 'string' and name:match("^[%a][%a' %-]*$") ~= nil
+end
+
+-- Re-checked against Config.Nationalities itself, not just trusted
+-- from whatever the NUI's dropdown sent — same "the real gate is
+-- server-side" rule as every other field here.
+local function ValidNationality(nationality)
+    if type(nationality) ~= 'string' then return false end
+    for _, n in ipairs(Config.Nationalities) do
+        if n == nationality then return true end
+    end
+    return false
 end
 
 RegisterNetEvent('hd:server:createCharacter', function(data)
@@ -95,8 +106,8 @@ RegisterNetEvent('hd:server:createCharacter', function(data)
         lastname = lastname,
         birthdate = birthdate,
         gender = type(data.gender) == 'string' and data.gender:sub(1, 20) or 'Not specified',
-        nationality = Config.DefaultCharinfo.nationality,
-        phone = '07' .. tostring(math.random(100000000, 999999999)),
+        nationality = ValidNationality(data.nationality) and data.nationality or Config.DefaultCharinfo.nationality,
+        phone = GenerateUKPhoneNumber(),
     }
     local job = {
         name = 'unemployed',
@@ -107,7 +118,7 @@ RegisterNetEvent('hd:server:createCharacter', function(data)
         type = Jobs['unemployed'].type,
     }
     local money = { cash = Config.StartingCash, bank = Config.StartingBank }
-    local metadata = { licences = { driver = false } }
+    local metadata = { licences = { driver = false }, hunger = 100, thirst = 100 }
     local position = { x = Config.DefaultSpawn.x, y = Config.DefaultSpawn.y, z = Config.DefaultSpawn.z, w = Config.DefaultSpawn.w }
 
     MySQL.insert.await(
@@ -128,5 +139,5 @@ RegisterNetEvent('hd:server:createCharacter', function(data)
     FinishLoadingPlayer(src, {
         citizenid = citizenid, license = license, charinfo = charinfo,
         job = job, money = money, metadata = metadata, position = position,
-    })
+    }, true) -- isNew: forces the wardrobe open once this character spawns in, see client/main.lua
 end)

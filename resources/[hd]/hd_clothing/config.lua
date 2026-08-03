@@ -80,18 +80,75 @@ Config.PreviewCamOffset = vector3(0.0, 2.1, 0.35) -- relative to the ped, lookin
 -- hd_society (the sale deposits into the 'clothingstore' fund) —
 -- Config.Societies in hd_society/config.lua needs a matching entry if
 -- you want that revenue somewhere; otherwise it's just not banked.
+--
+-- One of every real in-game clothing store location, city and county
+-- both — Binco is the budget brand (cheapest), Suburban mid-range,
+-- Ponsonbys the high-end Rockford Hills/Del Perro boutiques (priciest).
+-- Coordinates are the standard vanilla store doorways; nudge any of
+-- them if a ped ends up slightly off in your install.
 Config.Stores = {
+    -- ── Los Santos ──────────────────────────────────────────────────
     {
-        label = 'Suburban',
+        label = 'Suburban — Vinewood',
         coords = vector4(127.9, -223.4, 54.6, 70.0),
         pedModel = 'a_f_y_business_04',
         OutfitPrice = 150,
     },
     {
-        label = 'Ponsonbys',
+        label = 'Ponsonbys — Rockford Hills',
         coords = vector4(-708.7, -152.1, 37.4, 0.0),
         pedModel = 'a_m_y_business_03',
         OutfitPrice = 250,
+    },
+    {
+        label = 'Ponsonbys — Del Perro',
+        coords = vector4(-1447.7, -239.9, 46.9, 30.0),
+        pedModel = 'a_f_y_business_02',
+        OutfitPrice = 220,
+    },
+    {
+        label = 'Ponsonbys — Great Ocean Highway',
+        coords = vector4(-829.7, -1073.6, 11.3, 0.0),
+        pedModel = 'a_m_y_business_02',
+        OutfitPrice = 200,
+    },
+    {
+        label = 'Binco — Strawberry',
+        coords = vector4(72.3, -1399.1, 29.4, 0.0),
+        pedModel = 'a_f_y_hipster_03',
+        OutfitPrice = 60,
+    },
+    {
+        label = 'Binco — Davis',
+        coords = vector4(425.5, -800.2, 29.5, 0.0),
+        pedModel = 'a_m_y_hipster_01',
+        OutfitPrice = 60,
+    },
+    {
+        label = 'Binco — Vespucci',
+        coords = vector4(-167.9, -299.1, 39.7, 250.0),
+        pedModel = 'a_f_y_hipster_01',
+        OutfitPrice = 60,
+    },
+
+    -- ── Blaine County ───────────────────────────────────────────────
+    {
+        label = 'Suburban — Sandy Shores',
+        coords = vector4(1961.6, 3740.6, 32.3, 210.0),
+        pedModel = 'a_f_y_business_04',
+        OutfitPrice = 80,
+    },
+    {
+        label = 'Binco — Grapeseed',
+        coords = vector4(1696.1, 4829.3, 42.1, 0.0),
+        pedModel = 'a_m_y_hipster_01',
+        OutfitPrice = 50,
+    },
+    {
+        label = 'Binco — Paleto Bay',
+        coords = vector4(1195.9, 2696.9, 38.2, 0.0),
+        pedModel = 'a_f_y_hipster_03',
+        OutfitPrice = 50,
     },
 }
 Config.InteractDistance = 8.0

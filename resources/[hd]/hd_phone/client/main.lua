@@ -214,9 +214,9 @@ RegisterNUICallback('getStreetName', function(_, cb)
     cb({ name = name })
 end)
 
--- screenshot-basic (community resource, not included) rasterises the
--- frame — degrades to a clear error if it isn't running, never fakes
--- a photo.
+-- screenshot-basic (vendored at resources/[screenshot]/screenshot-basic)
+-- rasterises the frame — still degrades to a clear error rather than
+-- faking a photo if it's ever removed or fails to start.
 RegisterNUICallback('takePhoto', function(_, cb)
     if GetResourceState('screenshot-basic') ~= 'started' then
         cb({ ok = false, reason = 'screenshot-basic is not installed on this server.' })

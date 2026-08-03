@@ -62,9 +62,11 @@ Config.Apps = {
 }
 
 -- ═══════════════════════════ CAMERA ══════════════════════════════════
--- Needs the community 'screenshot-basic' resource (not included) to
--- actually capture a frame — degrades to a clear "not installed"
--- notice otherwise, never fakes a photo.
+-- Needs 'screenshot-basic' (the official CitizenFX resource, vendored
+-- at resources/[screenshot]/screenshot-basic and ensured in
+-- server.cfg.example) to actually capture a frame — degrades to a
+-- clear "not installed" notice if it's ever removed/not started,
+-- never fakes a photo.
 Config.Camera = {
     WebhookUrl = '', -- Discord webhook the captured image gets uploaded to
 }

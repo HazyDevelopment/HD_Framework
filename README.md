@@ -10,8 +10,10 @@ vehicles, economy, admin tools) talks to `HD_Framework` directly.
 1. **Get the two resources not included in this repo:**
    [oxmysql](https://github.com/overextended/oxmysql) into `resources/[hd]/`,
    [pma-voice](https://github.com/AvarianKnight/pma-voice) into `resources/[voice]/`.
-   Optional: [screenshot-basic](https://github.com/citizenfx/screenshot-basic)
-   if you want the phone's Camera app to work.
+   `screenshot-basic` (the phone Camera app's shutter) IS included, at
+   `resources/[screenshot]/screenshot-basic` — it's an official CitizenFX
+   resource that builds itself from source the first time FXServer starts
+   it, nothing to fetch separately.
 2. **Create a database** and import the files in `sql/` in this order:
    `hd_framework_install.sql` → `hd_inventory_install.sql` →
    `hd_phone_install.sql` → `hd_vehiclekeys_install.sql` →
@@ -62,12 +64,15 @@ resources/
     hd_phone/         ← HD Phone: Contacts, Messages, Calls, FaceTime, social apps,
                          Bank, Mail, Marketplace, Crypto, Matchup, Dark Chat, and more
     hd_policejob/     ← UK Police, hand-written against HD_Framework
+    hd_radial/        ← F1 interaction wheel: GPS/Interactions/Walkstyle/General/Work/Emotes
     hd_radio/         ← pma-voice radio channels, UK-style PTT tone
     hd_shops/         ← 24/7-style convenience stores
     hd_society/       ← business funds (police/ambulance/cardealer wages)
     hd_spawn/         ← spawn point picker shown after character select
   [mdt]/
     hazy_mdt/         ← MDT
+  [screenshot]/
+    screenshot-basic/ ← official CitizenFX resource, included — powers the phone Camera app
   [voice]/
     pma-voice/        ← third-party voice plugin (not included) — hd_radio depends on it but lives in [hd]
 sql/                  ← install scripts, see Install above for order

@@ -133,6 +133,13 @@ RegisterNetEvent('hd_phone:server:createWireAccount', function(data)
         return
     end
 
+    -- Confirmation lands in the HD ID's own Mail app, same as any real
+    -- "sign up with your account" flow — see onboarding.lua's welcome
+    -- message for the HD ID itself.
+    local hdEmail = MySQL.scalar.await('SELECT email FROM hd_phone_settings WHERE citizenid = ?', { citizenid })
+    exports['hd_phone']:SendMail(citizenid, 'Wire', 'Welcome to Wire',
+        ('Your Wire account @%s is ready.%s'):format(username, hdEmail and (' Signed up with %s.'):format(hdEmail) or ''))
+
     TriggerClientEvent('hd_phone:client:wireAccount', src, { username = username, pfp_url = (pfpUrl ~= '' and pfpUrl) or nil })
 end)
 

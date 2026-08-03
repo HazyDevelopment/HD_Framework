@@ -59,10 +59,19 @@ RegisterNetEvent('hd_phone:server:createAccount', function(data)
 
     GetOrCreateSettings(citizenid)
     local hash = MySQL.scalar.await('SELECT SHA2(?, 256)', { password })
+    local fullEmail = email .. '@hazydev.com'
     MySQL.update('UPDATE hd_phone_settings SET email = ?, password_hash = ?, security_answer = ?, onboarded = 1 WHERE citizenid = ?', {
-        email .. '@hazydev.com', hash, securityAnswer, citizenid
+        fullEmail, hash, securityAnswer, citizenid
     })
-    TriggerClientEvent('hd_phone:client:onboarded', src, email .. '@hazydev.com')
+
+    -- Makes the HD ID a real inbox, not just a label under Settings —
+    -- every app that lets you sign up "with your HD ID" (Wire's own
+    -- account gate in social.lua, this welcome message, anything added
+    -- later) drops a real Mail-app message here via the same SendMail
+    -- export bank.lua's receipts already use.
+    exports['hd_phone']:SendMail(citizenid, 'HD ID', 'Welcome to HD ID', ('Your HD ID %s is ready. Any app you sign up for with it will send its confirmation here.'):format(fullEmail))
+
+    TriggerClientEvent('hd_phone:client:onboarded', src, fullEmail)
 end)
 
 RegisterNetEvent('hd_phone:server:skipOnboarding', function()
