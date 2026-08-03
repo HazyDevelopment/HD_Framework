@@ -39,10 +39,17 @@ Config.IplWaitMs = 3000       -- how long to wait for a high-end shell's IPL to 
 -- capacity of anything.
 Config.ApartmentShells = {
     -- Ordinary houses/flats, already part of the base map — no IPL needed.
-    { id = 'flat_integrity28', label = '4 Integrity Way, Apt 28',   size = 'Studio',    coords = vector4(-18.08, -583.67, 79.47, 160.0) },
-    { id = 'flat_integrity30', label = '4 Integrity Way, Apt 30',   size = 'Studio',    coords = vector4(-35.31, -580.42, 88.71, 160.0) },
-    { id = 'flat_delperro4',   label = 'Del Perro Heights, Apt 4',  size = '1 Bedroom', coords = vector4(-1468.14, -541.82, 73.44, 30.0) },
-    { id = 'flat_delperro7',   label = 'Del Perro Heights, Apt 7',  size = '1 Bedroom', coords = vector4(-1477.14, -538.75, 55.53, 30.0) },
+    -- Both units share one real-world building entrance (confirmed
+    -- in-game via /getcoords), offset a metre apart so each still gets
+    -- its own walk-up-and-press-E spot and buzzer prompt.
+    { id = 'flat_integrity28', label = '4 Integrity Way, Apt 28',   size = 'Studio',    coords = vector4(-47.10, -585.80, 37.94, 243.8), exit = vector4(-31.53, -595.08, 80.01, 65.2) },
+    { id = 'flat_integrity30', label = '4 Integrity Way, Apt 30',   size = 'Studio',    coords = vector4(-49.10, -587.80, 37.94, 243.8), exit = vector4(-31.53, -595.08, 80.01, 65.2) },
+    -- Both units share one real-world building entrance (confirmed
+    -- in-game via /getcoords), offset a metre or two apart the same way
+    -- Eclipse Towers below shares its entrance across units — each still
+    -- gets its own walk-up-and-press-E spot and buzzer prompt.
+    { id = 'flat_delperro4',   label = 'Del Perro Heights, Apt 4',  size = '1 Bedroom', coords = vector4(-1447.66, -537.40, 34.74, 34.0), exit = vector4(-1452.21, -540.65, 74.03, 212.6) },
+    { id = 'flat_delperro7',   label = 'Del Perro Heights, Apt 7',  size = '1 Bedroom', coords = vector4(-1449.66, -539.40, 34.74, 34.0), exit = vector4(-1452.21, -540.65, 74.03, 212.6) },
     { id = 'flat_majestic',    label = 'Richard Majestic, Apt 2',   size = '2 Bedroom', coords = vector4(-915.81, -379.43, 113.67, 0.0) },
     { id = 'flat_tinsel',      label = 'Tinsel Towers, Apt 42',     size = '1 Bedroom', coords = vector4(-614.86, 40.68, 97.60, 180.0) },
     { id = 'flat_wildoats',    label = '3655 Wild Oats Drive',      size = '2 Bedroom', coords = vector4(-169.29, 486.49, 137.44, 0.0) },

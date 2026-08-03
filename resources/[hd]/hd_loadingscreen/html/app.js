@@ -73,80 +73,120 @@
         muteBtn.textContent = volume <= 0 ? '🔇' : volume < 50 ? '🔉' : '🔊';
     }
 
+    // console.log throughout this section on purpose — FiveM's NUI has
+    // its own dev tools (Alt+F5 in-game, or F8 console for resource
+    // errors), and since none of this can be tested against a real
+    // FiveM client from outside the game, these are the breadcrumbs
+    // needed to diagnose it from a report of what actually printed.
+    const LOG = (...args) => console.log('[hd_loadingscreen]', ...args);
+
     if (videoId) {
         volumeSlider.value = initialVolume;
         updateMuteIcon(initialVolume);
 
+        const soundHint = $('soundHint');
+        let unlocked = false;
+
+        // Plain embed URL, autoplay/loop/mute all as query params — this
+        // is what actually starts playing with NO JavaScript API call
+        // required at all, since those params take effect the moment
+        // the iframe itself loads. The JS IFrame Player API (added
+        // below) is used only for *convenience* afterwards (volume
+        // slider, mute toggle) — if its postMessage-based remote-control
+        // channel doesn't work correctly in FiveM's NUI origin for
+        // whatever reason, the music still starts, it just means the
+        // slider/button might not, which is the better failure mode.
+        function embedUrl(muted) {
+            const params = new URLSearchParams({
+                autoplay: '1',
+                mute: muted ? '1' : '0',
+                loop: '1',
+                playlist: videoId,
+                controls: '0',
+                disablekb: '1',
+                enablejsapi: '1',
+                playsinline: '1',
+                origin: window.location.origin,
+            });
+            return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
+        }
+
+        const ytFrame = document.createElement('iframe');
+        ytFrame.id = 'ytFrame';
+        ytFrame.width = '1';
+        ytFrame.height = '1';
+        ytFrame.allow = 'autoplay; encrypted-media';
+        ytFrame.src = embedUrl(true);
+        $('ytWrap').appendChild(ytFrame);
+        LOG('embed created, muted start:', ytFrame.src);
+
+        // Best-effort JS API layer on top of the same iframe — gives the
+        // volume slider/mute button real control when the postMessage
+        // channel works. `videoId`/`events` are irrelevant here since the
+        // iframe already has its own real src; this just attaches to it.
         const apiScript = document.createElement('script');
         apiScript.src = 'https://www.youtube.com/iframe_api';
         document.head.appendChild(apiScript);
 
-        const soundHint = $('soundHint');
-
         window.onYouTubeIframeAPIReady = function () {
-            ytPlayer = new YT.Player('ytWrap', {
-                height: '1',
-                width: '1',
-                videoId: videoId,
-                // Starting muted is what actually makes autoplay-with-
-                // sound reliable — Chromium (and CEF, which FiveM's NUI
-                // is built on) generally only honours autoplay
-                // unconditionally when it starts silent; an unmuted
-                // autoplay request is the thing that was inconsistently
-                // getting blocked before. Un-muting immediately after
-                // is allowed since it's a direct response to the
-                // player's own onReady, not a delayed/unprompted call.
-                playerVars: { autoplay: 1, mute: 1, loop: 1, playlist: videoId, controls: 0, disablekb: 1 },
+            LOG('iframe_api ready, attaching controller');
+            ytPlayer = new YT.Player(ytFrame, {
                 events: {
                     onReady: function (e) {
-                        e.target.setVolume(initialVolume);
-                        if (initialVolume > 0) e.target.unMute();
-                        e.target.playVideo();
+                        LOG('onReady — player state:', e.target.getPlayerState());
                         volumeControl.classList.remove('hidden');
-
-                        // Chromium's autoplay gate can silently block the
-                        // actual audio output above even while the YT
-                        // player's own JS-visible isMuted() already
-                        // reports false — the browser just eats the sound
-                        // rather than throwing or leaving isMuted() true.
-                        // That means a fallback gated on isMuted() (the
-                        // previous approach here) can end up never firing
-                        // even though nothing is audible. Detect it
-                        // properly instead: check getVolume()/muted state
-                        // shortly after onReady, and if it looks like it
-                        // never really started, show a hint and force
-                        // playback unconditionally on the next real
-                        // gesture rather than guessing at player state.
-                        if (initialVolume > 0) {
-                            setTimeout(() => {
-                                if (!unlocked) soundHint.classList.remove('hidden');
-                            }, 800);
-                        }
+                        e.target.setVolume(initialVolume);
+                        // Try unmuting via the API too, in case this
+                        // client's autoplay policy is fine with it —
+                        // harmless if it's silently ignored.
+                        if (initialVolume > 0 && !unlocked) e.target.unMute();
+                    },
+                    onError: function (e) {
+                        // 2=bad param, 5=HTML5 error, 100=video removed/private,
+                        // 101/150=embedding disabled by the uploader — the
+                        // last one is the single most common real-world
+                        // reason a specific video plays everywhere else but
+                        // not here, worth calling out explicitly.
+                        LOG('YouTube player error code', e.data, e.data === 101 || e.data === 150
+                            ? '— this video has embedding disabled by its uploader, pick a different one'
+                            : '');
                     },
                 },
             });
         };
 
-        // Fires on the very first real user gesture of any kind — a
-        // genuine click/keypress/touch always satisfies autoplay policy,
-        // unlike a programmatic call on its own. Unconditional (doesn't
-        // check isMuted() first) so it works even when the browser's
-        // silent block left the player's own state looking "already
-        // unmuted". One-shot: removes itself once it's actually run.
-        let unlocked = false;
+        // Fires on the very first real user gesture of any kind. Forces
+        // a fresh, DIRECTLY-gesture-triggered unmuted load of the same
+        // embed (bypassing the JS API/postMessage entirely) — a brand
+        // new navigation with autoplay+unmuted params, made synchronously
+        // inside a real click/key/touch handler, is honoured far more
+        // reliably by autoplay policy than an async postMessage command
+        // is, regardless of whatever's going on with the API channel.
+        // Also nudges the API-based player in parallel, best-effort.
         function unlockAudio() {
-            if (unlocked || !ytPlayer) return;
+            if (unlocked) return;
             unlocked = true;
             soundHint.classList.add('hidden');
             const vol = parseInt(volumeSlider.value, 10);
+            LOG('user gesture received, forcing playback at volume', vol);
             if (vol > 0) {
-                ytPlayer.unMute();
-                ytPlayer.setVolume(vol);
-                ytPlayer.playVideo();
+                ytFrame.src = embedUrl(false);
+                if (ytPlayer && typeof ytPlayer.unMute === 'function') {
+                    try { ytPlayer.unMute(); ytPlayer.setVolume(vol); ytPlayer.playVideo(); } catch (err) { LOG('API nudge failed', err); }
+                }
             }
             ['click', 'keydown', 'touchstart', 'mousedown'].forEach((ev) => document.removeEventListener(ev, unlockAudio));
         }
         ['click', 'keydown', 'touchstart', 'mousedown'].forEach((ev) => document.addEventListener(ev, unlockAudio));
+
+        // If nothing has unlocked it within a couple seconds, show the
+        // hint — a passive player who never clicks anything otherwise
+        // has no idea sound is one keypress away.
+        if (initialVolume > 0) {
+            setTimeout(() => {
+                if (!unlocked) soundHint.classList.remove('hidden');
+            }, 1500);
+        }
 
         volumeSlider.addEventListener('input', () => {
             const v = parseInt(volumeSlider.value, 10);

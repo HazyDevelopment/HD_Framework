@@ -57,6 +57,29 @@ RegisterNetEvent('hd_admin:server:bringHere', function(targetId)
     Notify(src, 'Brought them to you.', 'success')
 end)
 
+-- ═══════════════════════════ GET COORDS ════════════════════════════════
+-- `/getcoords [id]` — no id targets yourself. Prints a ready-to-paste
+-- `vector4(x, y, z, heading)` literal to both chat and the server
+-- console, so an admin can walk to any real-world spot in-game (a shop
+-- door, an apartment entrance, a job depot) and hand the exact literal
+-- straight to whoever's editing that resource's config.lua — there's no
+-- other way to get real coordinates out of a live server into config
+-- files short of this.
+RegisterCommand('getcoords', function(src, args)
+    if not IsAdmin(src) then return end
+    local id = tonumber(args[1]) or src
+    local ped = GetPlayerPed(id)
+    if not ped or ped == 0 then
+        Notify(src, 'Player not found.', 'error')
+        return
+    end
+    local coords = GetEntityCoords(ped)
+    local heading = GetEntityHeading(ped)
+    local literal = ('vector4(%.2f, %.2f, %.2f, %.1f)'):format(coords.x, coords.y, coords.z, heading)
+    Notify(src, literal, 'info')
+    print(('[hd_admin] getcoords (id %d): %s'):format(id, literal))
+end, false)
+
 -- ═══════════════════════════ HEAL / FREEZE ═════════════════════════════
 RegisterNetEvent('hd_admin:server:heal', function(targetId)
     local src = source

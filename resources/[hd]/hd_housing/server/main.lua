@@ -267,7 +267,12 @@ RegisterNetEvent('hd_housing:server:exit', function()
 
     local shell = FindShell(propertyId)
     if shell then
-        TriggerClientEvent('hd_housing:client:exit', src, shell.coords)
+        -- Most shells exit back out through the same door they entered —
+        -- `exit` only exists where that door isn't a safe/sensible place
+        -- to pop back out (e.g. Del Perro Heights, where the buzzer/entry
+        -- spot and the actual street-level exit are two different sides
+        -- of the building).
+        TriggerClientEvent('hd_housing:client:exit', src, shell.exit or shell.coords)
     end
 end)
 
