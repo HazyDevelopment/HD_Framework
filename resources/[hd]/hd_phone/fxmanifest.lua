@@ -46,9 +46,7 @@ files {
     'html/index.html',
     'html/css/style.css',
     'html/js/app.js',
-    'html/js/apps/*.js',
-    'html/images/*.png',
-    'html/images/*.svg'
+    'html/js/apps/*.js'
 }
 
 escrow_ignore {
