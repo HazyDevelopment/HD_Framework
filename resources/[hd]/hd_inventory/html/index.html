@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>HD Inventory</title>
+<!-- ?v= busts CEF's NUI cache — bump this any time html/css/js changes
+     stop showing up after a resource restart, since FiveM's embedded
+     browser can hold onto the old file otherwise. -->
+<link rel="stylesheet" href="css/style.css?v=2">
+</head>
+<body>
+
+<div id="hotbar" class="hidden"></div>
+
+<div id="inventory" class="hidden">
+    <div class="inv-wrap">
+        <div class="panel" id="panel-left">
+            <div class="panel-header">
+                <span class="panel-title" id="titleLeft">Inventory</span>
+                <div class="weight-bar"><div class="weight-fill" id="weightFillLeft"></div></div>
+                <span class="weight-text" id="weightTextLeft">0 / 0</span>
+            </div>
+            <div class="grid" id="grid-left"></div>
+        </div>
+
+        <!-- Drag an item here to Give (to whoever's closest) or Use it,
+             with the quantity above applied to either. Deliberately no
+             click-only path — same "everything is drag or right-click,
+             nothing is a separate select-then-click flow" model the
+             rest of this inventory already uses. -->
+        <div class="mid-column">
+            <img class="mid-logo" src="images/hd_logo.png" alt="HD">
+            <div class="mid-qty-wrap">
+                <span class="mid-qty-label">Qty</span>
+                <input type="number" id="actionQty" class="mid-qty-input" min="1" value="1">
+            </div>
+            <button class="mid-action-btn mid-action-give" id="giveBtn" data-act="give">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M12 15l-4-4M12 15l4-4"/><path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg>
+                <span>Give</span>
+            </button>
+            <button class="mid-action-btn mid-action-use" id="useBtn" data-act="use">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg>
+                <span>Use</span>
+            </button>
+        </div>
+
+        <div class="panel hidden" id="panel-right">
+            <div class="panel-header">
+                <span class="panel-title" id="titleRight">—</span>
+                <div class="weight-bar"><div class="weight-fill" id="weightFillRight"></div></div>
+                <span class="weight-text" id="weightTextRight">0 / 0</span>
+            </div>
+            <div class="grid" id="grid-right"></div>
+        </div>
+    </div>
+    <div class="hint">Drag to move/stack · Shift+drag to split · Right-click for actions · Drag off a panel to drop</div>
+</div>
+
+<div id="ghost" class="hidden"></div>
+<div id="tooltip" class="hidden"></div>
+
+<div id="contextMenu" class="hidden">
+    <button data-act="use">Use</button>
+    <button data-act="split">Split stack</button>
+    <button data-act="drop">Drop</button>
+</div>
+
+<div id="splitPrompt" class="hidden">
+    <div class="split-box">
+        <span id="splitLabel">Amount</span>
+        <input type="range" id="splitRange" min="1" max="1" value="1">
+        <span id="splitValue">1</span>
+        <div class="split-actions">
+            <button id="splitCancel">Cancel</button>
+            <button id="splitConfirm">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<script src="js/icons.js?v=2"></script>
+<script src="js/app.js?v=2"></script>
+</body>
+</html>
