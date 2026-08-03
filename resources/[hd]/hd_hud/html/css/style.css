@@ -1,0 +1,320 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+    --accent: #4A9EFF;
+    --text: #EDEDED;
+    --muted: #C4CAD3;
+    --danger: #E27272;
+    --success: #35935B;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    color: var(--text);
+    background: transparent;
+    overflow: hidden;
+    user-select: none;
+}
+
+.hidden { display: none !important; }
+
+#root {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+}
+
+/* ═══════════════════════════ WATERMARK ═══════════════════════════════ */
+#watermark {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    color: rgba(147, 51, 234, 0.75);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+}
+
+/* ═══════════════════════════ TOP RIGHT: CASH / JOB ════════════════════ */
+/* No panel/box behind this on purpose — just text sat directly on the
+   transparent HUD, legible via text-shadow against any backdrop. */
+#topRight {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    text-align: right;
+    padding: 10px 16px;
+    min-width: 150px;
+}
+#cashValue {
+    font-size: 19px;
+    font-weight: 800;
+    color: #6BE38B;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+}
+#jobRow { margin-top: 4px; font-size: 11px; }
+#jobLabel { font-weight: 700; color: var(--text); }
+#jobGrade { color: var(--muted); margin-left: 5px; }
+#jobGrade:not(:empty)::before { content: '· '; color: var(--muted); }
+
+/* ═══════════════════════════ MINIMAP CLUSTER ══════════════════════════ */
+/* One cohesive stack — compass/street bar, the circular map, the vitals
+   row — read as a single HUD component instead of three separate boxes
+   floating near each other, the way ox_hud/qb-hud/codem-blackhud-style
+   "black HUD" minimaps are laid out. */
+#minimapFrame {
+    position: absolute;
+    left: 10px;
+    bottom: 92px;
+    width: 186px;
+    height: 186px;
+    border-radius: 50%;
+    border: 2px solid rgba(74,158,255,0.55);
+    box-shadow: 0 0 0 4px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.5), inset 0 0 20px rgba(0,0,0,0.4);
+    pointer-events: none;
+}
+
+/* Sits directly on the strip of screen where GTA draws its native
+   health/armour bar (tied to the radar component, no native to peel it
+   off independently) — opaque enough there to fully occlude it, same
+   as the plain panel this replaced, just doing something useful with
+   the space instead of showing a blank plate. Overlaps the top of the
+   circle by a few px so there's no seam; if a sliver still shows at
+   some resolutions, grow height/bottom here — screen-space pixel
+   tweak, not a script change. */
+#compassBar {
+    position: absolute;
+    left: 10px;
+    bottom: 268px;
+    width: 186px;
+    height: 46px;
+    background: linear-gradient(180deg, rgba(8,9,12,0.97) 0%, rgba(8,9,12,0.97) 68%, rgba(8,9,12,0) 100%);
+    border-radius: 16px 16px 0 0;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 6px;
+    gap: 3px;
+}
+#streetName {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    color: var(--muted);
+    text-transform: uppercase;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+    max-width: 168px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+#compassTicks {
+    position: relative;
+    width: 100%;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#compassHeading {
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    color: var(--accent);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+}
+#compassCenterMark {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    transform: translateX(-50%);
+    width: 2px;
+    height: 5px;
+    background: var(--accent);
+    border-radius: 1px;
+    opacity: 0.8;
+}
+
+/* ═══════════════════════════ VITALS ══════════════════════════════════ */
+/* Pulled up closer under the minimap circle (vs. sitting flush in the
+   very corner) so the two read as one cluster rather than the map
+   floating apart from the status rings — #minimapFrame's own bottom
+   offset is tied to the native radar's SetMinimapComponentPosition
+   fractions above and isn't safe to nudge without re-verifying that
+   alignment in-game, so this side of the gap is the one closing it. */
+#vitals {
+    position: absolute;
+    left: 14px;
+    bottom: 26px;
+    display: flex;
+    gap: 8px;
+}
+.vital-ring {
+    position: relative;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: conic-gradient(var(--accent) calc(var(--pct, 100) * 1%), rgba(255,255,255,0.08) 0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.25s ease;
+}
+.vital-ring::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border-radius: 50%;
+    background: rgba(10,11,15,0.82);
+    border: 1px solid rgba(255,255,255,0.06);
+}
+.vital-icon {
+    position: relative;
+    z-index: 1;
+    width: 18px;
+    height: 18px;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6));
+}
+.vital-icon svg { width: 100%; height: 100%; fill: var(--text); }
+.vital.low .vital-ring { background: conic-gradient(var(--danger) calc(var(--pct, 100) * 1%), rgba(255,255,255,0.08) 0); animation: pulse 1s ease-in-out infinite; }
+.vital.low .vital-icon svg { fill: var(--danger); }
+@keyframes pulse { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.4); } }
+
+/* ═══════════════════════════ VEHICLE HUD ═══════════════════════════════ */
+#vehicleHud {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+#seatbeltIcon {
+    font-size: 20px;
+    opacity: 0.25;
+    filter: grayscale(1);
+    transition: opacity 0.2s ease, filter 0.2s ease;
+    margin-bottom: 8px;
+}
+#seatbeltIcon.on { opacity: 1; filter: none; color: var(--success); }
+#seatbeltIcon.warn { opacity: 1; filter: none; color: var(--danger); animation: pulse 0.6s ease-in-out infinite; }
+
+/* Minimalist dark-panel speedo: a big bold number over a thin
+   gradient progress bar, rather than a thick circular gauge — an
+   original take on the clean "black HUD" style, not a copy of any
+   specific commercial speedo's assets or markup. */
+#speedo {
+    width: 132px;
+    padding: 12px 16px 14px;
+    background: linear-gradient(165deg, rgba(12,13,17,0.72), rgba(6,7,9,0.85));
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+#speedoReadout {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 5px;
+    margin-bottom: 10px;
+}
+#speedValue { font-size: 34px; font-weight: 800; line-height: 1; letter-spacing: -0.02em; text-shadow: 0 1px 4px rgba(0,0,0,0.6); }
+#speedUnit { font-size: 10px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+
+#speedoTrack {
+    width: 100%;
+    height: 4px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.08);
+    overflow: hidden;
+}
+#speedoTrackFill {
+    height: 100%;
+    width: 0%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--accent), #8FC5FF);
+    transition: width 0.15s ease, background 0.2s ease;
+}
+#speedoTrackFill.redline { background: linear-gradient(90deg, #E27272, #FF9E4A); }
+
+#vehicleStats {
+    background: linear-gradient(165deg, rgba(12,13,17,0.6), rgba(8,9,12,0.7));
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 110px;
+}
+.veh-stat { display: flex; align-items: center; gap: 8px; }
+.veh-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; width: 32px; }
+.veh-bar { flex: 1; height: 6px; border-radius: 4px; background: rgba(255,255,255,0.08); overflow: hidden; }
+.veh-bar-fill { height: 100%; background: var(--accent); transition: width 0.25s ease, background 0.25s ease; }
+.veh-bar-fill.low { background: var(--danger); }
+.veh-value { font-size: 11px; font-weight: 700; min-width: 24px; text-align: right; }
+
+/* ═══════════════════════════ /hudsettings PANEL ═══════════════════════ */
+#hudSettings {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    pointer-events: none;
+}
+.hs-panel {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 280px;
+    background: linear-gradient(165deg, rgba(20,10,30,0.95), rgba(8,9,12,0.97));
+    border: 1px solid rgba(147,51,234,0.3);
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+    pointer-events: auto;
+}
+.hs-header { font-size: 14px; font-weight: 800; margin-bottom: 12px; letter-spacing: 0.02em; }
+.hs-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 2px;
+    font-size: 12.5px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.hs-row:last-of-type { border-bottom: none; }
+.hs-toggle input { width: 16px; height: 16px; accent-color: #9333EA; cursor: pointer; }
+.hs-hint { font-size: 10.5px; color: var(--muted); line-height: 1.4; margin: 10px 0 14px; }
+.hs-actions { display: flex; gap: 8px; }
+.hs-actions button {
+    flex: 1;
+    padding: 8px;
+    border-radius: 7px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.06);
+    color: var(--text);
+    font-weight: 700;
+    font-size: 11.5px;
+    cursor: pointer;
+}
+#hsClose { background: #9333EA; border-color: #9333EA; }
+
+/* While editing, positionable HUD elements get a dashed outline and
+   accept mouse input (the rest of #root stays click-through). */
+.hud-editing #watermark,
+.hud-editing #topRight,
+.hud-editing #vitals,
+.hud-editing #vehicleHud {
+    pointer-events: auto;
+    cursor: move;
+    outline: 1px dashed rgba(147,51,234,0.7);
+    outline-offset: 4px;
+    border-radius: 8px;
+}

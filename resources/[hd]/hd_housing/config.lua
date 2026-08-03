@@ -48,8 +48,8 @@ Config.ApartmentShells = {
     -- in-game via /getcoords), offset a metre or two apart the same way
     -- Eclipse Towers below shares its entrance across units — each still
     -- gets its own walk-up-and-press-E spot and buzzer prompt.
-    { id = 'flat_delperro4',   label = 'Del Perro Heights, Apt 4',  size = '1 Bedroom', coords = vector4(-1447.66, -537.40, 34.74, 34.0), exit = vector4(-1452.21, -540.65, 74.03, 212.6) },
-    { id = 'flat_delperro7',   label = 'Del Perro Heights, Apt 7',  size = '1 Bedroom', coords = vector4(-1449.66, -539.40, 34.74, 34.0), exit = vector4(-1452.21, -540.65, 74.03, 212.6) },
+    { id = 'flat_delperro4',   label = 'Del Perro Heights, Apt 4',  size = '1 Bedroom', coords = vector4(-1447.66, -537.40, 34.74, 34.0), exit = vector4(-1452.24, -540.67, 74.03, 218.3) },
+    { id = 'flat_delperro7',   label = 'Del Perro Heights, Apt 7',  size = '1 Bedroom', coords = vector4(-1449.66, -539.40, 34.74, 34.0), exit = vector4(-1452.24, -540.67, 74.03, 218.3) },
     { id = 'flat_majestic',    label = 'Richard Majestic, Apt 2',   size = '2 Bedroom', coords = vector4(-915.81, -379.43, 113.67, 0.0) },
     { id = 'flat_tinsel',      label = 'Tinsel Towers, Apt 42',     size = '1 Bedroom', coords = vector4(-614.86, 40.68, 97.60, 180.0) },
     { id = 'flat_wildoats',    label = '3655 Wild Oats Drive',      size = '2 Bedroom', coords = vector4(-169.29, 486.49, 137.44, 0.0) },
