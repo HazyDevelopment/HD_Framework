@@ -92,6 +92,19 @@ exports('GetOwnedProperty', function(citizenid)
     return RowToProperty(row)
 end)
 
+-- Called by HD_Framework/server/characters.lua right after a
+-- successful ClaimStarterFlat, so a brand-new character's very first
+-- spawn position is inside the home they just picked instead of a
+-- generic street spawn — never IPL'd (starter flats are always plain
+-- base-map shells, see config.lua's Config.StarterFlatIds), so this is
+-- just the raw interior coords with no streaming to arrange first.
+exports('GetShellInteriorCoords', function(shellId)
+    local shell = FindShell(shellId)
+    if not shell then return nil end
+    local interior = shell.interior or shell.coords
+    return { x = interior.x, y = interior.y, z = interior.z, w = 0.0 }
+end)
+
 -- ═══════════════════════════ ENTER / EXIT ═════════════════════════════
 -- Entry is driven off Config.ApartmentShells directly, not a
 -- hd_properties row — every shell is walkable/enterable for a preview
@@ -103,6 +116,21 @@ end)
 -- the person asking" both allow it.
 local InsideInterior = {} -- [src] = propertyId
 local GuestAccess = {} -- [propertyId] = { [src] = true } — one-time, consumed the moment it's used to enter
+
+-- A brand-new character's very first spawn lands them directly inside
+-- their claimed starter flat (HD_Framework/server/characters.lua sets
+-- their spawn position to it) — no teleport to run here, just marking
+-- them as home so the buzzer/furniture systems agree with where they
+-- visibly already are. Ownership re-checked server-side regardless of
+-- what the client claims, same as every other entry path.
+RegisterNetEvent('hd_housing:server:setInsideFromSpawn', function(propertyId)
+    local src = source
+    local Player = Framework and Framework.Functions.GetPlayer(src)
+    if not Player then return end
+    local row = MySQL.single.await('SELECT citizenid FROM hd_properties WHERE id = ?', { propertyId })
+    if not row or row.citizenid ~= Player.PlayerData.citizenid then return end
+    InsideInterior[src] = propertyId
+end)
 
 RegisterNetEvent('hd_housing:server:enter', function(propertyId)
     local src = source

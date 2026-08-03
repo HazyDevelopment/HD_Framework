@@ -60,6 +60,7 @@ local ready = false
 local awaitingSelection = false
 local listReceived = false -- flips true the moment ANY character-select payload arrives
 local isNewCharacter = false -- set from hd:client:onPlayerLoaded, read once in ConfirmSpawn then left alone
+local newCharacterHomeId = nil -- the starter flat claimed at creation, if any — rides along with isNewCharacter
 
 -- Retries only cover a dropped/never-answered first request (the
 -- "early-join" case the original comment describes) — it has to stop
@@ -161,10 +162,11 @@ end
 
 exports('GetDefaultSpawn', function() return Config.DefaultSpawn end)
 
-RegisterNetEvent('hd:client:onPlayerLoaded', function(playerData, isNew)
+RegisterNetEvent('hd:client:onPlayerLoaded', function(playerData, isNew, homePropertyId)
     ready = true
     HD.PlayerData = playerData
     isNewCharacter = isNew or false
+    newCharacterHomeId = homePropertyId
 
     -- Character-select NUI is dismissed here, but the ped stays frozen
     -- and the screen stays faded to black — hd_spawn (if installed)
@@ -202,6 +204,21 @@ end)
 RegisterNetEvent('HD:Client:ConfirmSpawn', function(coords)
     local ped = PlayerPedId()
     if coords and coords.x then
+        -- A brand-new connection has nothing streamed in yet — jumping
+        -- straight to the target coords and unfreezing immediately is
+        -- what caused the "spawns half in the floor, then falls
+        -- through" bug: the ground/interior collision genuinely wasn't
+        -- loaded yet at the moment the ped was placed and released.
+        -- Requesting it and waiting (re-asserting the position each
+        -- retry, since the world streaming around the ped can nudge it)
+        -- means the ped is only ever released onto solid ground.
+        RequestCollisionAtCoord(coords.x, coords.y, coords.z)
+        local waited = 0
+        while not HasCollisionLoadedAroundEntity(ped) and waited < 3000 do
+            SetEntityCoordsNoOffset(ped, coords.x, coords.y, coords.z, false, false, false)
+            Wait(50)
+            waited = waited + 50
+        end
         SetEntityCoordsNoOffset(ped, coords.x, coords.y, coords.z, false, false, false)
         SetEntityHeading(ped, coords.w or 0.0)
     end
@@ -220,7 +237,8 @@ RegisterNetEvent('HD:Client:ConfirmSpawn', function(coords)
     -- Only fires once per character ever, not on every relog.
     if isNewCharacter then
         isNewCharacter = false
-        TriggerEvent('HD:Client:NewCharacterSpawned')
+        TriggerEvent('HD:Client:NewCharacterSpawned', newCharacterHomeId)
+        newCharacterHomeId = nil
     end
 end)
 

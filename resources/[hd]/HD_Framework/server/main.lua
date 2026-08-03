@@ -93,11 +93,14 @@ end
 -- `isNew` (true only from createCharacter) rides along on the same
 -- event so the client knows to force the wardrobe open once this
 -- character actually spawns in — see client/main.lua's
--- HD:Client:ConfirmSpawn handler for where that's acted on.
-function FinishLoadingPlayer(src, data, isNew)
+-- HD:Client:ConfirmSpawn handler for where that's acted on. `homePropertyId`
+-- (also createCharacter-only, nil otherwise) is the starter flat this
+-- character now spawns inside of, if any — passed through the same
+-- chain so hd_housing can mark them as home immediately.
+function FinishLoadingPlayer(src, data, isNew, homePropertyId)
     local Player = HD.Functions.CreatePlayerObject(src, data)
     HD.Players[src] = Player
-    TriggerClientEvent('hd:client:onPlayerLoaded', src, Player.PlayerData, isNew or false)
+    TriggerClientEvent('hd:client:onPlayerLoaded', src, Player.PlayerData, isNew or false, homePropertyId)
     TriggerEvent('HD:Server:PlayerLoaded', Player)
     if Config.Debug then print(('^3[HD_Framework]^7 Loaded %s (%s)'):format(Player.PlayerData.citizenid, src)) end
 end

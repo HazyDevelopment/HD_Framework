@@ -121,6 +121,23 @@ RegisterNetEvent('hd:server:createCharacter', function(data)
     local metadata = { licences = { driver = false }, hunger = 100, thirst = 100 }
     local position = { x = Config.DefaultSpawn.x, y = Config.DefaultSpawn.y, z = Config.DefaultSpawn.z, w = Config.DefaultSpawn.w }
 
+    -- Claimed BEFORE the players row is inserted, so a successful claim's
+    -- real interior coords become this character's actual starting
+    -- position — spawning inside the home they just picked instead of a
+    -- generic street spawn with no connection to it. Falls back to
+    -- Config.DefaultSpawn above if no flat was picked, hd_housing isn't
+    -- running, or the claim loses a race (someone else got it first).
+    local claimedFlatId = nil
+    if type(data.flatId) == 'string' and GetResourceState('hd_housing') == 'started' then
+        if exports['hd_housing']:ClaimStarterFlat(citizenid, data.flatId) then
+            local interiorCoords = exports['hd_housing']:GetShellInteriorCoords(data.flatId)
+            if interiorCoords then
+                position = interiorCoords
+                claimedFlatId = data.flatId
+            end
+        end
+    end
+
     MySQL.insert.await(
         'INSERT INTO players (citizenid, license, name, charinfo, job, money, metadata, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         {
@@ -130,14 +147,10 @@ RegisterNetEvent('hd:server:createCharacter', function(data)
         }
     )
 
-    if type(data.flatId) == 'string' and GetResourceState('hd_housing') == 'started' then
-        exports['hd_housing']:ClaimStarterFlat(citizenid, data.flatId)
-    end
-
     print(('^2[HD_Framework]^7 New citizen created: %s (%s)'):format(citizenid, firstname .. ' ' .. lastname))
 
     FinishLoadingPlayer(src, {
         citizenid = citizenid, license = license, charinfo = charinfo,
         job = job, money = money, metadata = metadata, position = position,
-    }, true) -- isNew: forces the wardrobe open once this character spawns in, see client/main.lua
+    }, true, claimedFlatId) -- isNew forces the wardrobe open; claimedFlatId marks them "home" in hd_housing — both handled once this character actually spawns in, see client/main.lua
 end)

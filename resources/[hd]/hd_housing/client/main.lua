@@ -28,6 +28,18 @@ RegisterNetEvent('HD:Client:OnPlayerLoaded', function(playerData)
     TriggerServerEvent('hd_housing:server:getAllProperties')
 end)
 
+-- HD_Framework fires this once, right after a brand-new character
+-- spawns, carrying the starter flat id they just claimed (nil if they
+-- skipped picking one) — HD_Framework/server/characters.lua already
+-- pointed their very first spawn position at that flat's own interior
+-- coords, so this just tells hd_housing's own bookkeeping they're
+-- already home (no teleport here, they're already standing in it).
+RegisterNetEvent('HD:Client:NewCharacterSpawned', function(homePropertyId)
+    if not homePropertyId then return end
+    insidePropertyId = homePropertyId
+    TriggerServerEvent('hd_housing:server:setInsideFromSpawn', homePropertyId)
+end)
+
 -- ═══════════════════════════ BLIPS ═════════════════════════════════════
 local function BlipColorFor(p)
     if p.citizenid == myCitizenId then return 2 end   -- green — yours

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Hazy Development</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="root">
+    <div id="slideshow"></div>
+    <div id="vignette"></div>
+
+    <div id="content">
+        <img id="logo" src="" alt="">
+        <div id="serverName"></div>
+        <div id="tagline"></div>
+
+        <div id="progressWrap">
+            <div id="progressBar"></div>
+        </div>
+
+        <div id="volumeControl" class="hidden">
+            <button id="muteBtn" aria-label="Mute">🔊</button>
+            <input type="range" id="volumeSlider" min="0" max="100" value="35" aria-label="Music volume">
+            <span id="muteHint">Space to mute</span>
+        </div>
+
+        <div id="progressText">Connecting…</div>
+    </div>
+
+    <div id="watermark">Hazy Development</div>
+
+    <div id="soundHint" class="hidden">🔊 Click or press any key for sound</div>
+</div>
+
+<div id="cursorDot"></div>
+
+<div id="ytWrap"></div>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
