@@ -1,12 +1,13 @@
 -- ═══════════════════════════════════════════════════════════════════
 --  HD INVENTORY | GROUND DROPS
---  Persisted to `hd_inventory_drops` (v1.1.0) — a row exists for
---  exactly as long as the drop does, created on INSERT the moment an
---  item lands on the ground, deleted the moment it's emptied. `Drops`
---  is a write-through in-memory cache of that table so LoadDrop/
---  ValidateProximity don't hit the DB on every call — it's loaded in
---  full at resource start, so a restart doesn't lose anything sitting
---  on the ground.
+--  Backed by `hd_inventory_drops` only for as long as the current
+--  server session lasts — a row exists for exactly as long as the drop
+--  does, created on INSERT the moment an item lands on the ground,
+--  deleted the moment it's emptied. `Drops` is the in-memory table
+--  LoadDrop/SaveDrop actually work against; the table is wiped at
+--  resource start on purpose (every restart should leave a clean
+--  ground, not scatter last session's drops back out), so it never
+--  needs reading from at boot beyond that.
 -- ═══════════════════════════════════════════════════════════════════
 
 Drops = {}
@@ -30,31 +31,11 @@ end
 
 CreateThread(function()
     Wait(2000) -- give server/main.lua's DB-verify check a head start; harmless either way, this is wrapped in pcall
-    local ok, rows = pcall(function() return MySQL.query.await('SELECT id, x, y, z, data FROM hd_inventory_drops') end)
-    if not ok or not rows then return end -- table missing (not installed yet) — Drops just stays empty
+    local ok, count = pcall(function() return MySQL.scalar.await('SELECT COUNT(*) FROM hd_inventory_drops') end)
+    if not ok or not count then return end -- table missing (not installed yet) — nothing to clear
 
-    -- ResolveDropProp needs ItemDefs (server/main.lua only populates it
-    -- once HD_Framework reports 'started'), and the flat Wait(2000)
-    -- above isn't a guarantee of that on a slow boot. Model is computed
-    -- once right here and never revisited, so if ItemDefs were still
-    -- empty at this point every restored drop would silently sit on
-    -- the fallback prop for the rest of the session, not just a
-    -- one-off flicker. Capped so a genuinely broken HD_Framework
-    -- doesn't hang this thread forever — it just proceeds with
-    -- whatever's available at that point.
-    local waited = 0
-    while next(ItemDefs) == nil and waited < 10000 do Wait(100) waited = waited + 100 end
-
-    for _, row in ipairs(rows) do
-        local data = json.decode(row.data) or {}
-        Drops[row.id] = {
-            id = row.id,
-            coords = { x = row.x, y = row.y, z = row.z },
-            data = data,
-            model = ResolveDropProp(data),
-        }
-    end
-    if #rows > 0 then print(('^2[hd_inventory]^7 Restored %d ground drop(s) from the last session.'):format(#rows)) end
+    MySQL.query('DELETE FROM hd_inventory_drops')
+    if count > 0 then print(('^2[hd_inventory]^7 Cleared %d leftover ground drop(s) from the last session.'):format(count)) end
 end)
 
 function LoadDrop(id)
