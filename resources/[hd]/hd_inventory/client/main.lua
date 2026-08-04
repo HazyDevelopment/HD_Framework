@@ -10,6 +10,21 @@ local Framework = nil
 CreateThread(function()
     while GetResourceState('HD_Framework') ~= 'started' do Wait(100) end
     Framework = exports['HD_Framework']:GetCoreObject()
+end)
+
+-- GetResourceState('HD_Framework') == 'started' only means the resource
+-- is running — it flips true almost immediately on connect, well before
+-- THIS player's character is actually loaded (citizenid resolved,
+-- inventory row readable). Firing 'ready' off that used to mean
+-- PushOwnInventory ran too early, found no citizenid yet, and silently
+-- no-op'd server-side with nothing ever retrying it — leaving
+-- LeftPanelCache (and therefore hd_phone's client-side "do you have a
+-- phone" check) empty for the rest of the session unless the player
+-- happened to open Tab at least once. HD:Client:OnPlayerLoaded is the
+-- same "character is actually ready" broadcast every other resource
+-- (hd_clothing, hd_hud, ...) already keys off, so this fires at the
+-- right time on every single connect, not just sometimes.
+RegisterNetEvent('HD:Client:OnPlayerLoaded', function()
     TriggerServerEvent('hd_inventory:server:ready')
 end)
 
