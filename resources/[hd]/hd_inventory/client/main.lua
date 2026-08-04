@@ -28,6 +28,22 @@ RegisterNetEvent('HD:Client:OnPlayerLoaded', function()
     TriggerServerEvent('hd_inventory:server:ready')
 end)
 
+-- Weapons are only ever selected/used through the inventory hotbar now
+-- — the native radial weapon wheel (hold TAB by default, same key this
+-- resource already binds to open the inventory grid) is disabled every
+-- frame so it can never appear and fight with that. INPUT_SELECT_WEAPON
+-- (37) is the wheel itself; INPUT_WEAPON_WHEEL_NEXT/PREV (14/15, mouse
+-- wheel scroll) are the same subsystem's scroll-cycle shortcut and are
+-- disabled alongside it for the same reason.
+CreateThread(function()
+    while true do
+        DisableControlAction(0, 37, true)
+        DisableControlAction(0, 14, true)
+        DisableControlAction(0, 15, true)
+        Wait(0)
+    end
+end)
+
 local invOpen = false
 local LeftPanelCache = nil
 

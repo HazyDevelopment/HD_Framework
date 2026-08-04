@@ -96,6 +96,17 @@
         // channel doesn't work correctly in FiveM's NUI origin for
         // whatever reason, the music still starts, it just means the
         // slider/button might not, which is the better failure mode.
+        // youtube-nocookie.com instead of youtube.com — the privacy-
+        // enhanced embed domain doesn't set the tracking cookies the
+        // "Before you continue to YouTube" consent screen exists to
+        // gate, so it's noticeably less likely to show that overlay for
+        // a brand-new profile (like a fresh FiveM CEF instance connecting
+        // for the first time) than a plain youtube.com embed is. Not a
+        // guarantee — Google can still show it — but it's a real,
+        // well-documented mitigation and costs nothing to use. The
+        // IFrame API script itself has to stay on youtube.com (Google
+        // doesn't serve it from the nocookie domain), it's explicitly
+        // supported to control a nocookie-domain embed with it.
         function embedUrl(muted) {
             const params = new URLSearchParams({
                 autoplay: '1',
@@ -108,7 +119,7 @@
                 playsinline: '1',
                 origin: window.location.origin,
             });
-            return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
+            return `https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`;
         }
 
         const ytFrame = document.createElement('iframe');
@@ -140,6 +151,23 @@
                         // client's autoplay policy is fine with it —
                         // harmless if it's silently ignored.
                         if (initialVolume > 0 && !unlocked) e.target.unMute();
+                    },
+                    // 1 = playing — but the very first load always starts
+                    // muted (autoplay policy allows that unconditionally),
+                    // so state alone doesn't mean audible sound; it has to
+                    // also actually be unmuted with real volume. A blocked
+                    // embed (autoplay policy, or stuck behind YouTube's own
+                    // consent overlay in its cross-origin iframe — see
+                    // embedUrl's comment) never reaches "playing" at all
+                    // once unmuted, which is what makes this a reliable
+                    // signal, unlike a fixed timer that can't tell
+                    // "blocked" from "hasn't started buffering yet".
+                    onStateChange: function (e) {
+                        if (e.data === 1 && !unlocked && !e.target.isMuted() && e.target.getVolume() > 0) {
+                            unlocked = true;
+                            soundHint.classList.add('hidden');
+                            LOG('playback confirmed audible on its own — no gesture needed');
+                        }
                     },
                     onError: function (e) {
                         // 2=bad param, 5=HTML5 error, 100=video removed/private,
