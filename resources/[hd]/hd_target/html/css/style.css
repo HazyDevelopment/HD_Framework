@@ -1,0 +1,77 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; background: transparent; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; }
+
+.hidden { display: none !important; }
+
+:root {
+    --accent: #9333EA;
+}
+
+#root {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+}
+
+/* ═══════════════════════════ RETICLE ══════════════════════════════════ */
+/* Small, transparent purple, dead centre — same accent colour and
+   translucent-glass feel as the loading screen, not a solid opaque
+   icon sat on top of the game world. */
+#reticle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 34px;
+    height: 22px;
+    margin: -11px 0 0 -17px;
+    filter: drop-shadow(0 1px 4px rgba(0,0,0,0.5));
+    animation: reticleIn 0.15s ease;
+}
+#eyeIcon {
+    width: 100%;
+    height: 100%;
+    fill: rgba(147, 51, 234, 0.55);
+    stroke: rgba(216, 180, 254, 0.9);
+    stroke-width: 1;
+}
+#eyeIcon circle { fill: rgba(216, 180, 254, 0.9); }
+
+@keyframes reticleIn {
+    from { opacity: 0; transform: scale(0.6); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* ═══════════════════════════ OPTION LIST ══════════════════════════════ */
+#optionList {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin-top: 18px;
+    margin-left: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 140px;
+}
+
+.option-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: rgba(59, 7, 100, 0.4);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(216, 180, 254, 0.25);
+    color: #f3e8ff;
+    font-size: 12.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: background 0.1s ease, border-color 0.1s ease;
+}
+.option-row.selected {
+    background: rgba(147, 51, 234, 0.55);
+    border-color: rgba(216, 180, 254, 0.6);
+}
+.option-icon { font-size: 13px; opacity: 0.9; width: 14px; text-align: center; }

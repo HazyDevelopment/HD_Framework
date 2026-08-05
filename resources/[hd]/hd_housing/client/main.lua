@@ -65,9 +65,52 @@ local function RefreshBlips()
     end
 end
 
+-- A thin local wrapper rather than pointing the "Enter" option straight
+-- at the server event — grantedAccess is a one-time flag (the server's
+-- own GuestAccess table is the real, authoritative consumption of it;
+-- see server/main.lua's enter handler), but the CLIENT's copy needs
+-- clearing too the moment it's used, same as the old Draw3DText/E-press
+-- code already did, or canInteract below would keep saying "Enter" is
+-- still available after the server's already spent it.
+RegisterNetEvent('hd_housing:client:targetEnter', function(propertyId)
+    grantedAccess[propertyId] = nil
+    TriggerServerEvent('hd_housing:server:enter', propertyId)
+end)
+
+-- Three mutually-exclusive options per property, gated by canInteract
+-- so only the one that actually applies to THIS player right now ever
+-- shows — ownership/buzz state changes live (a buzz gets accepted, an
+-- unowned flat gets bought), and canInteract is re-evaluated by
+-- hd_target on every single poll, so that's picked up automatically
+-- with no need to re-register anything when it changes. Falls back to
+-- the old walk-up-and-press-E prompt entirely if hd_target isn't
+-- installed — never a hard dependency.
+local function RegisterPropertyTarget(p)
+    if GetResourceState('hd_target') ~= 'started' then return end
+    local coords = vector3(p.coords.x, p.coords.y, p.coords.z)
+    exports['hd_target']:AddZone('hd_housing_' .. p.id, coords, Config.InteractDistance, {
+        {
+            icon = '🏠', label = 'Enter ' .. p.label, distance = Config.InteractDistance,
+            event = 'hd_housing:client:targetEnter', args = p.id,
+            canInteract = function() return p.citizenid == myCitizenId or grantedAccess[p.id] end,
+        },
+        {
+            icon = '👀', label = 'Preview ' .. p.label, distance = Config.InteractDistance,
+            serverEvent = 'hd_housing:server:enter', args = p.id,
+            canInteract = function() return not p.citizenid end,
+        },
+        {
+            icon = '🔔', label = 'Ring Buzzer — ' .. p.label, distance = Config.InteractDistance,
+            serverEvent = 'hd_housing:server:buzz', args = p.id,
+            canInteract = function() return p.citizenid and p.citizenid ~= myCitizenId and not grantedAccess[p.id] end,
+        },
+    })
+end
+
 RegisterNetEvent('hd_housing:client:allProperties', function(list)
     properties = list
     RefreshBlips()
+    for _, p in ipairs(properties) do RegisterPropertyTarget(p) end
 end)
 
 local function Draw3DText(coords, text)
@@ -101,6 +144,13 @@ local function HideBrochure()
 end
 
 -- ═══════════════════════════ ENTER (exterior proximity) ═══════════════
+-- The actual enter/preview/buzz interaction itself is hd_target zones
+-- now (RegisterPropertyTarget above) — this loop just keeps the
+-- brochure card up for whoever's lingering near an unowned property,
+-- which isn't really an "interaction" so much as ambient info, plus a
+-- Draw3DText+E fallback for a server that hasn't installed hd_target.
+local hasTarget = GetResourceState('hd_target') == 'started'
+
 CreateThread(function()
     while true do
         local sleep = 800
@@ -114,23 +164,25 @@ CreateThread(function()
                     sleep = 0
                     local mine = p.citizenid == myCitizenId
                     local blocked = p.citizenid and not mine and not grantedAccess[p.id] -- owned by someone else, and not just buzzed in
+                    local justBuzzedIn = grantedAccess[p.id]
 
                     nearAny = true
-                    if blocked then
-                        Draw3DText(vector3(p.coords.x, p.coords.y, p.coords.z + 1.0), ('[E] Ring Buzzer — %s'):format(p.label))
-                        if IsControlJustReleased(0, 38) then -- E
-                            TriggerServerEvent('hd_housing:server:buzz', p.id)
+                    if not hasTarget then
+                        if blocked then
+                            Draw3DText(vector3(p.coords.x, p.coords.y, p.coords.z + 1.0), ('[E] Ring Buzzer — %s'):format(p.label))
+                            if IsControlJustReleased(0, 38) then -- E
+                                TriggerServerEvent('hd_housing:server:buzz', p.id)
+                            end
+                        else
+                            Draw3DText(vector3(p.coords.x, p.coords.y, p.coords.z + 1.0),
+                                mine and ('[E] Enter %s'):format(p.label) or justBuzzedIn and ('[E] Enter %s (buzzed in)'):format(p.label) or ('[E] Preview %s'):format(p.label))
+                            if IsControlJustReleased(0, 38) then -- E
+                                grantedAccess[p.id] = nil
+                                TriggerServerEvent('hd_housing:server:enter', p.id)
+                            end
                         end
-                    else
-                        local justBuzzedIn = grantedAccess[p.id]
-                        Draw3DText(vector3(p.coords.x, p.coords.y, p.coords.z + 1.0),
-                            mine and ('[E] Enter %s'):format(p.label) or justBuzzedIn and ('[E] Enter %s (buzzed in)'):format(p.label) or ('[E] Preview %s'):format(p.label))
-                        if IsControlJustReleased(0, 38) then -- E
-                            grantedAccess[p.id] = nil
-                            TriggerServerEvent('hd_housing:server:enter', p.id)
-                        end
-                        if not mine and not justBuzzedIn then ShowBrochure(p) end
                     end
+                    if not blocked and not mine and not justBuzzedIn then ShowBrochure(p) end
                 end
             end
 
@@ -197,9 +249,22 @@ end)
 -- ═══════════════════════════ PLACEABLE FURNITURE ═══════════════════════
 local furnitureObjects = {} -- [kind] = entity handle
 
+-- Same dispatch the old Draw3DText/E-press furniture prompt used —
+-- wardrobe opens a client command, stash round-trips to the server.
+-- Kept as one local handler so both the hd_target option and the
+-- no-hd_target fallback loop below trigger identically.
+RegisterNetEvent('hd_housing:client:targetFurniture', function(kind)
+    if kind == 'wardrobe' then
+        ExecuteCommand(Config.WardrobeCommand or 'outfits')
+    elseif kind == 'stash' then
+        TriggerServerEvent('hd_housing:server:openStash', insidePropertyId)
+    end
+end)
+
 local function DeleteFurnitureObject(kind)
     local obj = furnitureObjects[kind]
     if obj and DoesEntityExist(obj) then
+        if GetResourceState('hd_target') == 'started' then exports['hd_target']:RemoveEntity(obj) end
         SetEntityAsMissionEntity(obj, true, true)
         DeleteObject(obj)
     end
@@ -223,6 +288,13 @@ local function SpawnOne(kind, data)
     SetEntityAsMissionEntity(obj, true, true)
     SetModelAsNoLongerNeeded(hash)
     furnitureObjects[kind] = obj
+
+    if GetResourceState('hd_target') == 'started' then
+        exports['hd_target']:AddEntity(obj, {
+            { icon = '🗄️', label = 'Open ' .. (def.label or kind), distance = Config.FurnitureInteractDistance,
+              event = 'hd_housing:client:targetFurniture', args = kind },
+        })
+    end
 end
 
 function SpawnFurniture(furniture)
@@ -251,11 +323,14 @@ RegisterCommand('placestash', function()
     TriggerServerEvent('hd_housing:server:placeFurniture', 'stash')
 end, false)
 
--- Proximity interact for whichever furniture is actually placed.
+-- Proximity interact for whichever furniture is actually placed — only
+-- runs the old Draw3DText/E-press prompt when hd_target isn't
+-- installed; SpawnOne above already registers a hd_target option on
+-- the object itself otherwise.
 CreateThread(function()
     while true do
         local sleep = 500
-        if insidePropertyId then
+        if insidePropertyId and not hasTarget then
             local pc = GetEntityCoords(PlayerPedId())
             for kind, obj in pairs(furnitureObjects) do
                 if obj and DoesEntityExist(obj) then
@@ -265,11 +340,7 @@ CreateThread(function()
                         local label = Config.Furniture[kind] and Config.Furniture[kind].label or kind
                         Draw3DText(GetEntityCoords(obj) + vector3(0.0, 0.0, 0.6), ('[E] Open %s'):format(label))
                         if IsControlJustReleased(0, 38) then
-                            if kind == 'wardrobe' then
-                                ExecuteCommand(Config.WardrobeCommand or 'outfits')
-                            elseif kind == 'stash' then
-                                TriggerServerEvent('hd_housing:server:openStash', insidePropertyId)
-                            end
+                            TriggerEvent('hd_housing:client:targetFurniture', kind)
                         end
                     end
                 end

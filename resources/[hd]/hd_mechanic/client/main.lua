@@ -195,6 +195,27 @@ RegisterCommand(Config.Command, function()
     TriggerServerEvent('hd_mechanic:server:openTerminal', VehToNet(veh))
 end, false)
 
+-- hold-to-look-at-any-vehicle equivalent of the command above — applies
+-- to every vehicle model in the game (AddGlobalVehicle, not AddModel
+-- per model), same terminal, same server-side re-validation once it
+-- opens. Optional: does nothing if hd_target isn't installed. Waited
+-- for rather than checked once — resources starting alongside each
+-- other at server boot have no guaranteed order without a hard
+-- dependency, and this one's deliberately not a hard dependency.
+CreateThread(function()
+    local waited = 0
+    while GetResourceState('hd_target') ~= 'started' and waited < 10000 do Wait(200) waited = waited + 200 end
+    if GetResourceState('hd_target') ~= 'started' then return end
+    exports['hd_target']:AddGlobalVehicle({
+        { icon = '🔧', label = 'Diagnose Vehicle', distance = 3.0, event = 'hd_mechanic:client:targetDiagnose' },
+    })
+end)
+
+RegisterNetEvent('hd_mechanic:client:targetDiagnose', function(veh)
+    if not veh or veh == 0 then return end
+    TriggerServerEvent('hd_mechanic:server:openTerminal', VehToNet(veh))
+end)
+
 local currentNetId = nil
 
 RegisterNetEvent('hd_mechanic:client:terminal', function(data)
