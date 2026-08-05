@@ -18,3 +18,12 @@ CREATE TABLE IF NOT EXISTS `hd_admin_bans` (
     PRIMARY KEY (`id`),
     KEY `license_idx` (`license`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- v1.1.0 — raw platform identifiers captured at ban time (not looked up
+-- later, since a banned player's identifiers obviously can't be
+-- re-queried after they're gone). discord_name is a best-effort Discord
+-- bot API resolution done once at ban time when Config.DiscordBotToken
+-- is set; NULL just means it wasn't available, never a blocker.
+ALTER TABLE `hd_admin_bans` ADD COLUMN IF NOT EXISTS `discord_id`   VARCHAR(32)  NULL DEFAULT NULL AFTER `license`;
+ALTER TABLE `hd_admin_bans` ADD COLUMN IF NOT EXISTS `discord_name` VARCHAR(100) NULL DEFAULT NULL AFTER `discord_id`;
+ALTER TABLE `hd_admin_bans` ADD COLUMN IF NOT EXISTS `cfx_id`       VARCHAR(64)  NULL DEFAULT NULL AFTER `discord_name`;

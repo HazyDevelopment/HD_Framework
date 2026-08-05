@@ -10,9 +10,26 @@
 function PushBans(src)
     if not IsAdmin(src) then return end
     local rows = MySQL.query.await(
-        'SELECT id, license, name, reason, banned_by, expires, created FROM hd_admin_bans WHERE active = 1 ORDER BY id DESC LIMIT 100'
+        'SELECT id, license, discord_id, discord_name, cfx_id, name, reason, banned_by, expires, created FROM hd_admin_bans WHERE active = 1 ORDER BY id DESC LIMIT 100'
     ) or {}
     TriggerClientEvent('hd_admin:client:bans', src, rows)
+end
+
+-- Raw identifiers captured at the moment of the ban — a banned
+-- connection is gone, so this is the only chance to record which
+-- Discord/Cfx.re account was actually attached to it. discord_name is
+-- resolved through hd_admin's own bot-token lookup when configured;
+-- nil just means "not available", never a failure.
+local function CaptureIdentifiers(id)
+    local discordId, cfxId = nil, nil
+    for i = 0, GetNumPlayerIdentifiers(id) - 1 do
+        local ident = GetPlayerIdentifier(id, i)
+        if ident then
+            if ident:match('^discord:') then discordId = ident:gsub('^discord:', '')
+            elseif ident:match('^fivem:') then cfxId = ident:gsub('^fivem:', '') end
+        end
+    end
+    return discordId, cfxId, discordId and ResolveDiscordUsername(discordId) or nil
 end
 
 RegisterNetEvent('hd_admin:server:getBans', function()
@@ -37,16 +54,17 @@ RegisterNetEvent('hd_admin:server:ban', function(targetId, reason, hours)
     local adminName = Admin and (Admin.PlayerData.charinfo.firstname .. ' ' .. Admin.PlayerData.charinfo.lastname) or 'Console'
     local targetName = Target.PlayerData.charinfo.firstname .. ' ' .. Target.PlayerData.charinfo.lastname
     local hoursNum = tonumber(hours)
+    local discordId, cfxId, discordName = CaptureIdentifiers(id)
 
     if hoursNum and hoursNum > 0 then
         MySQL.insert.await(
-            'INSERT INTO hd_admin_bans (license, name, reason, banned_by, expires) VALUES (?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL ? HOUR))',
-            { Target.PlayerData.license, targetName, reason, adminName, hoursNum }
+            'INSERT INTO hd_admin_bans (license, discord_id, discord_name, cfx_id, name, reason, banned_by, expires) VALUES (?, ?, ?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL ? HOUR))',
+            { Target.PlayerData.license, discordId, discordName, cfxId, targetName, reason, adminName, hoursNum }
         )
     else
         MySQL.insert.await(
-            'INSERT INTO hd_admin_bans (license, name, reason, banned_by, expires) VALUES (?, ?, ?, ?, NULL)',
-            { Target.PlayerData.license, targetName, reason, adminName }
+            'INSERT INTO hd_admin_bans (license, discord_id, discord_name, cfx_id, name, reason, banned_by, expires) VALUES (?, ?, ?, ?, ?, ?, ?, NULL)',
+            { Target.PlayerData.license, discordId, discordName, cfxId, targetName, reason, adminName }
         )
     end
 
@@ -86,12 +104,24 @@ AddEventHandler('playerConnecting', function(name, setKickReason, deferrals)
     end
 
     local ban = MySQL.single.await(
-        'SELECT reason, expires FROM hd_admin_bans WHERE license = ? AND active = 1 AND (expires IS NULL OR expires > NOW()) ORDER BY id DESC LIMIT 1',
+        'SELECT reason, expires, discord_id, discord_name, cfx_id FROM hd_admin_bans WHERE license = ? AND active = 1 AND (expires IS NULL OR expires > NOW()) ORDER BY id DESC LIMIT 1',
         { license }
     )
     if ban then
         local expiresText = ban.expires and ('Expires: %s'):format(ban.expires) or 'Permanent.'
-        deferrals.done(Config.BanMessage:format(ban.reason, expiresText))
+        -- Identity this ban was recorded against, shown so whoever's
+        -- reading it (the banned player, or staff looking at an appeal)
+        -- can confirm it's actually tied to their own account and isn't
+        -- a mix-up — not shown at all if none of it was ever captured.
+        local identityLines = {}
+        if ban.discord_name or ban.discord_id then
+            identityLines[#identityLines + 1] = ('Discord: %s'):format(ban.discord_name or ('ID ' .. ban.discord_id))
+        end
+        if ban.cfx_id then
+            identityLines[#identityLines + 1] = ('Cfx.re ID: %s'):format(ban.cfx_id)
+        end
+        local identityText = #identityLines > 0 and ('\n' .. table.concat(identityLines, '\n')) or ''
+        deferrals.done(Config.BanMessage:format(ban.reason, expiresText) .. identityText)
         return
     end
 

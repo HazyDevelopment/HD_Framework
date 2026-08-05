@@ -15,6 +15,15 @@ CreateThread(function()
     Framework = exports['HD_Framework']:GetCoreObject()
 end)
 
+-- Optional — hd_anticheat isn't a hard dependency, this just tells it
+-- "this specific jump was legitimate" when it's installed, so an
+-- apartment enter/exit never reads as a teleport hack. Silently does
+-- nothing if hd_anticheat isn't running.
+local function GrantMovementGrace(src)
+    if GetResourceState('hd_anticheat') ~= 'started' then return end
+    pcall(function() exports['hd_anticheat']:GrantMovementGrace(src) end)
+end
+
 -- Looked up by id from both the boot-seed thread and
 -- server/realestate.lua's register command.
 function FindShell(id)
@@ -154,6 +163,7 @@ RegisterNetEvent('hd_housing:server:enter', function(propertyId)
 
     local interior = shell.interior or shell.coords
     InsideInterior[src] = propertyId
+    GrantMovementGrace(src)
     TriggerClientEvent('hd_housing:client:enter', src, {
         id = shell.id,
         label = shell.label,
@@ -272,6 +282,7 @@ RegisterNetEvent('hd_housing:server:exit', function()
         -- to pop back out (e.g. Del Perro Heights, where the buzzer/entry
         -- spot and the actual street-level exit are two different sides
         -- of the building).
+        GrantMovementGrace(src)
         TriggerClientEvent('hd_housing:client:exit', src, shell.exit or shell.coords)
     end
 end)

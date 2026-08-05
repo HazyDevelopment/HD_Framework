@@ -10,6 +10,8 @@ local isAdmin = false
 local panelOpen = false
 local noclip = false
 local godmode = false
+local spectating = nil -- target server id, or nil
+local spectateCam = nil
 
 CreateThread(function()
     while GetResourceState('HD_Framework') ~= 'started' do Wait(100) end
@@ -95,21 +97,105 @@ RegisterNetEvent('hd_admin:client:setTime', function(hour)
     NetworkOverrideClockTime(hour, 0, 0)
 end)
 
--- ═══════════════════════════ SELF: NOCLIP / GODMODE / TP / VEHICLE ════
+-- ═══════════════════════════ SELF: NOCLIP / GODMODE / SPECTATE ════════
+-- Both just relay to server/self.lua now — it re-checks IsAdmin and
+-- bounces back the actual toggle, same "server owns the real
+-- permission check" pattern every other action in this panel already
+-- follows, and the only way hd_anticheat gets a trustworthy admin
+-- identity to exempt rather than trusting whatever the client claims.
 RegisterNUICallback('toggleNoclip', function(_, cb)
+    TriggerServerEvent('hd_admin:server:toggleNoclip')
+    cb({})
+end)
+
+RegisterNUICallback('toggleGodmode', function(_, cb)
+    TriggerServerEvent('hd_admin:server:toggleGodmode')
+    cb({})
+end)
+
+RegisterNetEvent('hd_admin:client:toggleNoclip', function()
     noclip = not noclip
     local ped = PlayerPedId()
     SetEntityCollision(ped, not noclip, not noclip)
     SetEntityInvincible(ped, noclip or godmode)
     Config.Notify(noclip and 'Noclip ON' or 'Noclip OFF', 'info')
-    cb({ enabled = noclip })
+    SendNUIMessage({ action = 'selfState', noclip = noclip, godmode = godmode })
 end)
 
-RegisterNUICallback('toggleGodmode', function(_, cb)
+RegisterNetEvent('hd_admin:client:toggleGodmode', function()
     godmode = not godmode
     SetEntityInvincible(PlayerPedId(), godmode or noclip)
     Config.Notify(godmode and 'God mode ON' or 'God mode OFF', 'info')
-    cb({ enabled = godmode })
+    SendNUIMessage({ action = 'selfState', noclip = noclip, godmode = godmode })
+end)
+
+-- Frozen + hidden + collision-off rather than an actual teleport — the
+-- spectator's own position never moves, so there's nothing for
+-- hd_anticheat's movement checks to even see here.
+local function EndSpectate()
+    if not spectating then return end
+    spectating = nil
+    local ped = PlayerPedId()
+    RenderScriptCams(false, true, 500, true, true)
+    if spectateCam then DestroyCam(spectateCam) spectateCam = nil end
+    FreezeEntityPosition(ped, false)
+    SetEntityVisible(ped, true, false)
+    SetEntityCollision(ped, true, true, true)
+    SendNUIMessage({ action = 'spectateState', active = false })
+end
+
+RegisterNUICallback('startSpectate', function(data, cb)
+    TriggerServerEvent('hd_admin:server:startSpectate', data.targetId)
+    cb({})
+end)
+
+RegisterNUICallback('stopSpectate', function(_, cb)
+    TriggerServerEvent('hd_admin:server:stopSpectate')
+    EndSpectate()
+    cb({})
+end)
+
+RegisterNetEvent('hd_admin:client:startSpectate', function(targetId)
+    if spectating then EndSpectate() end
+    spectating = targetId
+    local ped = PlayerPedId()
+    FreezeEntityPosition(ped, true)
+    SetEntityVisible(ped, false, false)
+    SetEntityCollision(ped, false, false, false)
+    spectateCam = CreateCam('DEFAULT_SCRIPTED_CAMERA', true)
+    RenderScriptCams(true, false, 0, true, true)
+    Config.Notify('Spectating.', 'info')
+    SendNUIMessage({ action = 'spectateState', active = true })
+end)
+
+RegisterNetEvent('hd_admin:client:stopSpectate', function() EndSpectate() end)
+
+CreateThread(function()
+    while true do
+        local sleep = 500
+        if spectating then
+            sleep = 0
+            local targetPed = GetPlayerPed(spectating)
+            if not targetPed or targetPed == 0 or not DoesEntityExist(targetPed) then
+                Config.Notify('Target is no longer available — spectate ended.', 'info')
+                EndSpectate()
+            else
+                local coords = GetEntityCoords(targetPed)
+                local forward = GetEntityForwardVector(targetPed)
+                local camPos = coords - forward * 4.0 + vector3(0.0, 0.0, 2.0)
+                SetCamCoord(spectateCam, camPos.x, camPos.y, camPos.z)
+                PointCamAtEntity(spectateCam, targetPed, 0.0, 0.0, 0.6, true)
+            end
+        end
+        Wait(sleep)
+    end
+end)
+
+-- Safety net — a stray hidden/frozen/collision-off ped left behind by a
+-- resource restart mid-spectate would be a real problem for whoever's
+-- using it, not just a visual glitch.
+AddEventHandler('onResourceStop', function(resourceName)
+    if resourceName == GetCurrentResourceName() and spectating then EndSpectate() end
 end)
 
 RegisterNUICallback('teleportWaypoint', function(_, cb)

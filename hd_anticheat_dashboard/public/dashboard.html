@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HD AntiCheat Dashboard</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="shell">
+        <div id="sidebar">
+            <div class="brand"><span class="brand-hd">HD</span><span class="brand-ac">ANTICHEAT</span></div>
+            <button class="nav-btn active" data-page="config">Server Config</button>
+            <button class="nav-btn" data-page="webhook">Discord Webhook</button>
+            <button class="nav-btn" data-page="bans">Ban Log</button>
+            <div class="sidebar-spacer"></div>
+            <div class="license-badge" id="licenseBadge">—</div>
+            <button class="nav-btn" id="logoutBtn">Log Out</button>
+        </div>
+
+        <div id="content">
+
+            <!-- ═══════════════════ SERVER CONFIG ═══════════════════ -->
+            <section class="page active" id="page-config">
+                <div class="page-header"><h1>Server Config</h1></div>
+
+                <div class="card">
+                    <h2>Movement Detection</h2>
+                    <p class="card-desc">Blank fields fall back to the defaults already in your resource's config.lua — you only need to set what you want to override.</p>
+                    <div class="grid-2">
+                        <div class="field"><label>Check Interval (ms)</label><input type="number" id="check_interval_ms" placeholder="1500"></div>
+                        <div class="field"><label>Spawn Grace (ms)</label><input type="number" id="spawn_grace_ms" placeholder="6000"></div>
+                        <div class="field"><label>Max On-Foot Speed (m/s)</label><input type="number" step="0.1" id="max_on_foot_speed" placeholder="12.0"></div>
+                        <div class="field"><label>Teleport Distance (m)</label><input type="number" step="0.1" id="teleport_distance" placeholder="60.0"></div>
+                        <div class="field"><label>Damage Check Delay (ms)</label><input type="number" id="damage_check_delay_ms" placeholder="350"></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Suspicion Scoring</h2>
+                    <div class="grid-2">
+                        <div class="field"><label>Ban Threshold</label><input type="number" id="ban_threshold" placeholder="100"></div>
+                        <div class="field"><label>Score Decay / Minute</label><input type="number" id="score_decay_per_minute" placeholder="20"></div>
+                        <div class="field"><label>Speed Hack Points</label><input type="number" id="points_speed_hack" placeholder="40"></div>
+                        <div class="field"><label>Teleport Hack Points</label><input type="number" id="points_teleport_hack" placeholder="55"></div>
+                        <div class="field"><label>Invincibility Points</label><input type="number" id="points_invincibility" placeholder="60"></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Ban Message</h2>
+                    <div class="field"><textarea id="ban_message" placeholder="Banned by HD AntiCheat.&#10;Reason: %s"></textarea></div>
+                    <p class="hint">%s is replaced with the ban reason.</p>
+                </div>
+
+                <div class="actions-row">
+                    <button class="btn btn-primary" id="saveConfigBtn">Save Config</button>
+                    <span class="success-msg" id="configMsg"></span>
+                </div>
+            </section>
+
+            <!-- ═══════════════════ DISCORD WEBHOOK ═══════════════════ -->
+            <section class="page" id="page-webhook">
+                <div class="page-header"><h1>Discord Webhook</h1></div>
+
+                <div class="card">
+                    <h2>Ban Notifications</h2>
+                    <p class="card-desc">Every ban HD AntiCheat issues on your server posts here as a rich embed, including whatever identity fields are available for that player at the moment of the ban.</p>
+
+                    <div class="field">
+                        <label>Discord Webhook URL</label>
+                        <input type="url" id="discord_webhook_url" placeholder="https://discord.com/api/webhooks/...">
+                        <p class="hint">Discord: Server Settings → Integrations → Webhooks → New Webhook → Copy URL.</p>
+                    </div>
+
+                    <div class="field">
+                        <label>Embed Color</label>
+                        <input type="text" id="embed_color_hex" placeholder="#ed4245" style="max-width: 140px;">
+                    </div>
+
+                    <div class="checkbox-row"><input type="checkbox" id="include_cfx" checked><label for="include_cfx">Show Cfx.re account name</label></div>
+                    <div class="checkbox-row"><input type="checkbox" id="include_steam" checked><label for="include_steam">Show Steam ID (when Steam is running)</label></div>
+                    <div class="checkbox-row"><input type="checkbox" id="include_discord" checked><label for="include_discord">Show Discord ID / username (when Discord is running)</label></div>
+                    <div class="checkbox-row"><input type="checkbox" id="include_screenshots" checked><label for="include_screenshots">Attach screenshot burst on injection/mod-menu bans</label></div>
+                    <p class="hint">
+                        FiveM gives scripts no way to record real video, so "screenshot burst" is exactly that — a few stills captured a fraction of a second apart via the
+                        <code>screenshot-basic</code> resource when the injection tripwire fires, posted together as an image gallery. Requires <code>screenshot-basic</code>
+                        to be started as a dependency alongside hd_anticheat.
+                    </p>
+
+                    <div class="actions-row">
+                        <button class="btn btn-primary" id="saveWebhookBtn">Save</button>
+                        <button class="btn" id="testWebhookBtn">Send Test</button>
+                        <span class="success-msg" id="webhookMsg"></span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══════════════════ BAN LOG ═══════════════════ -->
+            <section class="page" id="page-bans">
+                <div class="page-header">
+                    <h1>Ban Log</h1>
+                    <button class="btn btn-sm" id="refreshBansBtn">Refresh</button>
+                </div>
+                <div class="card">
+                    <table id="bansTable">
+                        <thead><tr><th>When</th><th>Player</th><th>Kind</th><th>Reason</th><th>Identity</th></tr></thead>
+                        <tbody><tr class="empty-row"><td colspan="5">Loading…</td></tr></tbody>
+                    </table>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    <div id="toast" class="hidden"></div>
+
+    <script src="js/dashboard.js"></script>
+</body>
+</html>

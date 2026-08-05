@@ -53,6 +53,13 @@ RegisterNetEvent('hd_admin:server:bringHere', function(targetId)
     local coords = GetEntityCoords(myPed)
     local id = tonumber(targetId)
     if not id or not GetPlayerPed(id) or GetPlayerPed(id) == 0 then Notify(src, 'Player not found.', 'error') return end
+    -- Unlike teleportTo (the admin moves themselves — already exempt),
+    -- this moves the TARGET, who might not be an admin at all — grant
+    -- them the same grace hd_housing's enter/exit gets, or hd_anticheat
+    -- would read this as a teleport hack on a perfectly innocent player.
+    if GetResourceState('hd_anticheat') == 'started' then
+        pcall(function() exports['hd_anticheat']:GrantMovementGrace(id) end)
+    end
     TriggerClientEvent('hd_admin:client:teleport', id, { x = coords.x, y = coords.y, z = coords.z + Config.TeleportZOffset })
     Notify(src, 'Brought them to you.', 'success')
 end)

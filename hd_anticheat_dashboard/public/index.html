@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HD AntiCheat Dashboard</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="login-wrap">
+        <div class="login-card">
+            <div class="brand"><span class="brand-hd">HD</span><span class="brand-ac">ANTICHEAT</span></div>
+
+            <form id="loginForm">
+                <div class="field">
+                    <label for="licenseKey">License Key</label>
+                    <input type="text" id="licenseKey" placeholder="HDAC-XXXX-XXXX-XXXX-XXXX" autocomplete="username" required>
+                </div>
+                <div class="field">
+                    <label for="secret">License Secret</label>
+                    <input type="password" id="secret" placeholder="Secret" autocomplete="current-password" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block" id="loginBtn">Log In</button>
+                <div class="error-msg" id="loginError"></div>
+            </form>
+            <div class="hint">Both were given to you when your HD AntiCheat license was issued. Lost your secret? Contact whoever sold you the license — it can't be recovered, only reissued.</div>
+        </div>
+    </div>
+
+    <script src="js/login.js"></script>
+</body>
+</html>

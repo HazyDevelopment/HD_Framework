@@ -20,7 +20,8 @@ server_scripts {
     'server/main.lua',
     'server/players.lua',
     'server/world.lua',
-    'server/bans.lua'
+    'server/bans.lua',
+    'server/self.lua'
 }
 
 ui_page 'html/index.html'

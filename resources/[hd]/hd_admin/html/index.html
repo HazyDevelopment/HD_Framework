@@ -51,6 +51,7 @@
                                 <button class="btn" data-act="bringHere">Bring Here</button>
                                 <button class="btn" data-act="heal">Heal</button>
                                 <button class="btn" data-act="toggleFreeze">Freeze/Unfreeze</button>
+                                <button class="btn" id="btnSpectateTarget">Spectate</button>
                             </div>
 
                             <div class="drawer-row">
@@ -148,7 +149,7 @@
                         <table id="bansTable">
                             <thead>
                                 <tr>
-                                    <th>Name</th><th>Reason</th><th>By</th><th>Expires</th><th></th>
+                                    <th>Name</th><th>Discord</th><th>Cfx.re ID</th><th>Reason</th><th>By</th><th>Expires</th><th></th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -164,6 +165,7 @@
                         <button class="btn" id="btnNoclip">Noclip: OFF</button>
                         <button class="btn" id="btnGodmode">God Mode: OFF</button>
                         <button class="btn" id="btnWaypoint">Teleport To Waypoint</button>
+                        <button class="btn btn-danger hidden" id="btnStopSpectate">Stop Spectating</button>
                     </div>
 
                     <div class="card">

@@ -62,6 +62,17 @@ window.addEventListener('message', (event) => {
         case 'options': cacheOptions(data.opts); break;
         case 'bans': renderBans(data.list); break;
         case 'announce': toast(`[Announcement] ${data.message}`); break;
+        case 'selfState':
+            noclipOn = !!data.noclip;
+            godmodeOn = !!data.godmode;
+            document.getElementById('btnNoclip').textContent = `Noclip: ${noclipOn ? 'ON' : 'OFF'}`;
+            document.getElementById('btnNoclip').classList.toggle('active-state', noclipOn);
+            document.getElementById('btnGodmode').textContent = `God Mode: ${godmodeOn ? 'ON' : 'OFF'}`;
+            document.getElementById('btnGodmode').classList.toggle('active-state', godmodeOn);
+            break;
+        case 'spectateState':
+            document.getElementById('btnStopSpectate').classList.toggle('hidden', !data.active);
+            break;
     }
 });
 
@@ -102,6 +113,12 @@ document.getElementById('paClose').addEventListener('click', () => {
 });
 
 document.getElementById('refreshPlayers').addEventListener('click', () => post('getPlayers'));
+
+document.getElementById('btnSpectateTarget').addEventListener('click', () => {
+    if (!selectedPlayer) return;
+    post('startSpectate', { targetId: selectedPlayer.id });
+    closePanel(); // camera's about to jump elsewhere — the panel would just be in the way
+});
 
 document.querySelectorAll('#playerActions [data-act]').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -187,7 +204,7 @@ function renderBans(list) {
     tbody.innerHTML = '';
 
     if (!list || list.length === 0) {
-        tbody.innerHTML = '<tr class="empty-row"><td colspan="5">No active bans.</td></tr>';
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="7">No active bans.</td></tr>';
         return;
     }
 
@@ -195,6 +212,8 @@ function renderBans(list) {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${escapeHtml(b.name)}</td>
+            <td>${escapeHtml(b.discord_name || b.discord_id || '—')}</td>
+            <td>${escapeHtml(b.cfx_id || '—')}</td>
             <td>${escapeHtml(b.reason)}</td>
             <td>${escapeHtml(b.banned_by)}</td>
             <td>${b.expires ? escapeHtml(b.expires) : 'Permanent'}</td>
@@ -208,19 +227,12 @@ function renderBans(list) {
 document.getElementById('refreshBans').addEventListener('click', () => post('getBans'));
 
 // ═══════════════════════════ SELF ═══════════════════════════════════════
-document.getElementById('btnNoclip').addEventListener('click', async () => {
-    const res = await post('toggleNoclip');
-    noclipOn = !!res.enabled;
-    document.getElementById('btnNoclip').textContent = `Noclip: ${noclipOn ? 'ON' : 'OFF'}`;
-    document.getElementById('btnNoclip').classList.toggle('active-state', noclipOn);
-});
-
-document.getElementById('btnGodmode').addEventListener('click', async () => {
-    const res = await post('toggleGodmode');
-    godmodeOn = !!res.enabled;
-    document.getElementById('btnGodmode').textContent = `God Mode: ${godmodeOn ? 'ON' : 'OFF'}`;
-    document.getElementById('btnGodmode').classList.toggle('active-state', godmodeOn);
-});
+// Buttons just fire the toggle — the actual ON/OFF state comes back via
+// the 'selfState' push once the server's re-checked IsAdmin and the
+// client's applied it for real (see the 'message' listener above).
+document.getElementById('btnNoclip').addEventListener('click', () => post('toggleNoclip'));
+document.getElementById('btnGodmode').addEventListener('click', () => post('toggleGodmode'));
+document.getElementById('btnStopSpectate').addEventListener('click', () => post('stopSpectate'));
 
 document.getElementById('btnWaypoint').addEventListener('click', () => post('teleportWaypoint'));
 
