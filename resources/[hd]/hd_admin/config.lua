@@ -16,7 +16,40 @@ Config = {}
 -- ═══════════════════════════════════════════════════════════════════
 
 Config.Command = 'admin'
-Config.Permission = 'hd.admin'
+
+-- ═══════════════════════════ DISCORD ROLE ADMIN ══════════════════════
+-- hd_admin is gated entirely on a Discord role, not an ACE permission
+-- — no `add_principal` line to hand-maintain in server.cfg per staff
+-- member, add or remove the role in Discord and it takes effect on
+-- that person's next /admin (checked fresh each time, cached for
+-- Config.DiscordCacheSeconds so it isn't hammering Discord's API on
+-- every single button click in the panel).
+--
+-- Checking a Discord user's guild roles requires Discord's own Bot
+-- API — there is no anonymous/tokenless way to look this up, that's a
+-- constraint of Discord's API, not a choice made here. Setup (about
+-- two minutes):
+--   1. https://discord.com/developers/applications -> New Application.
+--   2. Bot tab -> Reset Token -> copy it into Config.DiscordBotToken
+--      below. On the same tab, enable "SERVER MEMBERS INTENT" — the
+--      role lookup silently fails without it.
+--   3. OAuth2 -> URL Generator -> tick the "bot" scope -> open the
+--      generated URL and invite the bot into your Discord server.
+--   4. In Discord: User Settings -> Advanced -> turn on Developer Mode.
+--   5. Right-click your Discord server's icon -> Copy Server ID ->
+--      paste into Config.DiscordGuildId below.
+--   6. Server Settings -> Roles -> right-click the role that should
+--      count as admin -> Copy Role ID -> add it to
+--      Config.DiscordAdminRoleIds below (add more than one id if
+--      several different roles should all count as admin).
+-- Without all three filled in, /admin refuses everyone, console
+-- included — there's no ACE fallback left to fall back to on purpose.
+Config.DiscordBotToken = ''    -- from step 2 above — paste the bot token exactly as Discord shows it, nothing else
+Config.DiscordGuildId = '1528109596424536125'     -- from step 5 above
+Config.DiscordAdminRoleIds = { -- from step 6 above, one string per qualifying role
+     '1528133940312014998',
+}
+Config.DiscordCacheSeconds = 30 -- how long a player's checked admin status is trusted before re-querying Discord
 
 -- ═══════════════════════════ WORLD CONTROLS ═══════════════════════════
 -- The real, documented SetWeatherTypeNow string constants — not a
