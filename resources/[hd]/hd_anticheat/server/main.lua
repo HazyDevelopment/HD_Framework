@@ -49,7 +49,11 @@ function Notify(src, msg, ntype)
     TriggerClientEvent('HD:Client:Notify', src, msg, ntype or 'info')
 end
 
-local function GetCitizenId(src)
+-- Global (not local) so server/reports.lua and server/players.lua can
+-- reuse it too — everything in this resource's server_scripts shares
+-- one Lua environment, but only names declared without `local` cross
+-- file boundaries within it.
+function GetCitizenId(src)
     local Player = Framework and Framework.Functions.GetPlayer(src)
     return Player and Player.PlayerData.citizenid or nil
 end
@@ -197,6 +201,12 @@ function BroadcastToOpenPanels(action, data)
     end
 end
 
+-- Global so server/reports.lua can skip a redundant toast for an admin
+-- who's already getting the live panel push above.
+function OpenPanelsHas(src)
+    return OpenPanels[src] == true
+end
+
 local function BuildPlayerOverview()
     local list = {}
     for _, srcStr in ipairs(GetPlayers()) do
@@ -228,6 +238,12 @@ RegisterNetEvent('hd_anticheat:server:open', function()
     TriggerClientEvent('hd_anticheat:client:open', src)
     TriggerClientEvent('hd_anticheat:client:push', src, 'players', BuildPlayerOverview())
     TriggerClientEvent('hd_anticheat:client:push', src, 'flags', RecentFlags)
+    -- LicenseStatus is set by server/dashboard.lua's sync loop; nil
+    -- whenever no license is configured at all, in which case the NUI
+    -- just shows nothing for it — never a hard requirement to open the
+    -- panel (see dashboard.lua's header on why a blank license is a
+    -- no-op, not a lockout).
+    TriggerClientEvent('hd_anticheat:client:push', src, 'license', LicenseStatus)
 end)
 
 RegisterNetEvent('hd_anticheat:server:close', function()
@@ -283,6 +299,28 @@ exports('GrantMovementGrace', function(src, ms)
     MovementGrace[tonumber(src) or 0] = GetGameTimer() + (tonumber(ms) or Config.SpawnGraceMs)
 end)
 
+-- 'hd_anticheat:server:playerLoaded' is fired by THIS client
+-- (client/main.lua's HD:Client:OnPlayerLoaded handler), which means
+-- it's also an event name any injected script on that same client can
+-- fire directly, as often as it wants, with no NUI or admin permission
+-- involved at all — RegisterNetEvent has no concept of "only my own
+-- client script is allowed to trigger this". Without a guard here, that
+-- would be a genuine free pass: fire it once a second and MovementGrace
+-- never expires, making the speed/teleport checks in detection.lua
+-- permanently blind for that player. LastPlayerLoadedAt below is what
+-- closes that — real character loads are rare (once per session, plus
+-- the odd re-load), so capping this to once per SpawnGraceMs per player
+-- costs a legitimate client nothing while removing the exploit.
+local LastPlayerLoadedAt = {} -- [src] = GetGameTimer() of the last accepted call
 RegisterNetEvent('hd_anticheat:server:playerLoaded', function()
-    MovementGrace[source] = GetGameTimer() + Config.SpawnGraceMs
+    local src = source
+    local now = GetGameTimer()
+    local last = LastPlayerLoadedAt[src]
+    if last and (now - last) < Config.SpawnGraceMs then return end -- already inside a grace window this same event granted — ignore the replay
+    LastPlayerLoadedAt[src] = now
+    MovementGrace[src] = now + Config.SpawnGraceMs
+end)
+
+AddEventHandler('playerDropped', function()
+    LastPlayerLoadedAt[source] = nil
 end)

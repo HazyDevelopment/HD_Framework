@@ -49,6 +49,9 @@ html, body { width: 100%; height: 100%; background: transparent; overflow: hidde
 .brand-hd { color: #E9D5FF; }
 .brand-ac { color: #C084FC; margin-left: 4px; font-weight: 400; font-size: 14px; }
 
+.license-status { font-size: 11px; color: #86efac; padding: 0 10px 14px; }
+.license-status.license-warning { color: #fda4af; }
+
 .tab-btn {
     background: transparent;
     border: none;
@@ -181,6 +184,24 @@ input::placeholder { color: rgba(243, 232, 255, 0.5); }
 .btn-danger { background: rgba(190, 24, 93, 0.55); border-color: rgba(244, 114, 182, 0.6); color: #fff; }
 .btn-danger:hover { background: rgba(190, 24, 93, 0.8); }
 
+.btn-primary { background: rgba(192, 132, 252, 0.55); border-color: rgba(216, 180, 254, 0.7); color: #fff; font-weight: 600; }
+.btn-primary:hover { background: rgba(192, 132, 252, 0.75); }
+
+textarea {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(216, 180, 254, 0.3);
+    border-radius: 5px;
+    color: #f3e8ff;
+    padding: 9px 11px;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    resize: vertical;
+    width: 100%;
+}
+textarea:focus { border-color: #d8b4fe; }
+textarea::placeholder { color: rgba(243, 232, 255, 0.5); }
+
 /* ═══════════════════════ TOAST ═══════════════════════ */
 #toast {
     position: fixed;
@@ -197,7 +218,229 @@ input::placeholder { color: rgba(243, 232, 255, 0.5); }
     z-index: 999;
 }
 
+/* ═══════════════════════ /acreport FORM ═══════════════════════ */
+#reportFormOverlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 50;
+}
+#reportForm {
+    width: 420px;
+    max-width: 90vw;
+    background: rgba(59, 7, 100, 0.92);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(216, 180, 254, 0.4);
+    border-radius: 10px;
+    padding: 22px 24px;
+    color: #f3e8ff;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+#reportForm h2 { font-size: 17px; color: #fff; margin-bottom: 6px; }
+#reportForm .hint { margin-bottom: 16px; }
+#reportForm .field-label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #d8b4fe;
+    margin-bottom: 6px;
+}
+#reportTitleInput { width: 100%; margin-bottom: 14px; }
+#reportMessageInput { min-height: 110px; margin-bottom: 6px; }
+.report-form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+
+/* ═══════════════════════ REPORT NOTIFY (right side) ═══════════════════════ */
+/* Sibling of #app, shown to on-duty admins regardless of whether their
+   panel is open (server/reports.lua broadcasts to every on-duty admin,
+   not just ones with the panel open) — same "always-loaded NUI page"
+   trick #announceBanner relies on. */
+#reportNotify {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    max-width: 300px;
+    background: rgba(59, 7, 100, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(216, 180, 254, 0.45);
+    border-left: 3px solid #f0abfc;
+    border-radius: 8px;
+    padding: 12px 16px;
+    color: #f3e8ff;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+    z-index: 999;
+    font-size: 13px;
+    cursor: pointer;
+}
+.report-notify-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #f0abfc; margin-bottom: 4px; font-weight: 700; }
+
+/* ═══════════════════════ MONITOR TILE TELEMETRY ═══════════════════════ */
+.mon-tile-stats { font-size: 11px; color: #d8b4fe; margin-top: 6px; }
+.mon-stat-sep { color: rgba(216, 180, 254, 0.4); margin: 0 2px; }
+
 /* ═══════════════════════ SCROLLBAR ═══════════════════════ */
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(216, 180, 254, 0.25); border-radius: 4px; }
+
+/* ═══════════════════════ SIDEBAR EXTRAS (duty) ═══════════════════════ */
+#dutyToggle { font-weight: 600; }
+#dutyToggle.duty-off { color: #d8b4fe; }
+#dutyToggle.duty-on { background: rgba(134, 239, 172, 0.2); color: #86efac; }
+#dutyToggle.duty-on:hover { background: rgba(134, 239, 172, 0.32); }
+
+.hint {
+    font-size: 12px;
+    color: #d8b4fe;
+    line-height: 1.5;
+    margin-bottom: 12px;
+}
+.hint-inline { font-size: 12px; color: #d8b4fe; }
+
+/* ═══════════════════════ WORLD TAB ═══════════════════════ */
+.world-card {
+    background: rgba(59, 7, 100, 0.3);
+    border: 1px solid rgba(216, 180, 254, 0.2);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+.world-card h3 { font-size: 14px; color: #fff; margin-bottom: 8px; }
+.world-card .inline-form input { flex: 1; }
+
+/* ═══════════════════════ MONITOR TAB ═══════════════════════ */
+.monitor-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+}
+
+.mon-tile {
+    background: rgba(59, 7, 100, 0.3);
+    border: 1px solid rgba(216, 180, 254, 0.2);
+    border-radius: 8px;
+    padding: 8px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+.mon-tile:hover { border-color: rgba(216, 180, 254, 0.5); background: rgba(59, 7, 100, 0.45); }
+.mon-tile-head {
+    font-size: 12px;
+    color: #f3e8ff;
+    margin-bottom: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.mon-id { color: #c4b5fd; font-size: 11px; }
+.mon-tile canvas { width: 100%; height: auto; border-radius: 4px; display: block; }
+
+/* Big screen: the middle viewport itself carries NO background/blur of
+   its own, and while it's active the whole panel behind it goes
+   transparent too (see .big-screen-active below) — nothing painted by
+   this panel sits between the admin's eyes and the real spectate camera
+   hd_admin's own client is driving underneath. Only the toolbar and
+   thumbnail strip keep an opaque background, so those stay readable. */
+.monitor-big {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    z-index: 5;
+}
+/* #panel's own `overflow: hidden` (needed for its normal rounded-card
+   look) would otherwise clip .monitor-big's fixed, full-viewport box
+   down to just the panel's 78vw×80vh area — `visible` here is what lets
+   the big screen actually reach every edge of the real screen. */
+body.big-screen-active #panel { background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none; border-color: transparent; overflow: visible; }
+body.big-screen-active #sidebar { display: none; }
+body.big-screen-active #content { padding: 0; overflow: visible; }
+body.big-screen-active .tab-panel:not(.active) { display: none; }
+
+.big-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 16px;
+    background: rgba(59, 7, 100, 0.75);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(216, 180, 254, 0.25);
+}
+.big-name { font-weight: 600; color: #fff; flex: 1; }
+.big-actions { display: flex; align-items: center; gap: 8px; }
+.big-reason { width: 160px; }
+
+.big-viewport { flex: 1; }
+
+.big-thumbs {
+    display: flex;
+    gap: 8px;
+    padding: 10px 16px;
+    background: rgba(59, 7, 100, 0.75);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(216, 180, 254, 0.25);
+    overflow-x: auto;
+}
+.mon-thumb { flex-shrink: 0; cursor: pointer; text-align: center; }
+.mon-thumb canvas { border-radius: 4px; display: block; border: 1px solid rgba(216, 180, 254, 0.25); }
+.mon-thumb:hover canvas { border-color: rgba(216, 180, 254, 0.6); }
+.mon-thumb-label {
+    font-size: 10px;
+    color: #d8b4fe;
+    max-width: 90px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ═══════════════════════ REPORTS ═══════════════════════ */
+.report-actions { display: flex; gap: 6px; }
+
+/* ═══════════════════════ ADMIN CHAT ═══════════════════════ */
+.chat-log {
+    height: calc(100% - 90px);
+    min-height: 300px;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(216, 180, 254, 0.2);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+}
+.chat-msg { margin-bottom: 10px; }
+.chat-name { font-weight: 600; color: #f0abfc; font-size: 13px; }
+.chat-time { color: #c4b5fd; font-size: 11px; margin-left: 8px; }
+.chat-text { font-size: 13px; color: #f3e8ff; margin-top: 2px; }
+
+/* ═══════════════════════ ANNOUNCEMENT BANNER ═══════════════════════ */
+/* Sibling of #app, not inside it — shown to EVERY player, admin or not,
+   since a server-wide announcement has to reach everyone regardless of
+   whether their (admin-only) panel exists at all. */
+#announceBanner {
+    position: fixed;
+    top: 8vh;
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 360px;
+    max-width: 70vw;
+    background: rgba(59, 7, 100, 0.88);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(216, 180, 254, 0.45);
+    border-radius: 10px;
+    padding: 16px 24px;
+    text-align: center;
+    color: #f3e8ff;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+    z-index: 999;
+}
+.announce-title { font-size: 11px; letter-spacing: 1.5px; color: #d8b4fe; margin-bottom: 6px; }
+.announce-msg { font-size: 18px; font-weight: 600; color: #fff; }
+.announce-admin { font-size: 12px; color: #c4b5fd; margin-top: 6px; }

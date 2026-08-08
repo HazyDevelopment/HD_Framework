@@ -13,8 +13,22 @@
 
 DashboardWebhookIncludeScreenshots = false
 
+-- Last-known { plan, expiresAt, daysRemaining } from the dashboard, or
+-- nil if no license is configured or the first sync hasn't landed yet.
+-- Read by server/main.lua's open handler to show the NUI's Overview tab
+-- a small license status line — purely informational, nothing in this
+-- resource's actual detection/ban logic reads this table.
+LicenseStatus = nil
+
+-- Both Key/Secret AND DiscordGuildId are required for this to count as
+-- "configured" — a Key/Secret with a blank guild ID would never
+-- authenticate against the dashboard anyway (requireServerAuth now
+-- requires the X-Discord-Guild-Id header), so treating it as unconfigured
+-- here avoids a doomed HTTP round trip every sync interval.
 local function LicenseConfigured()
-    return Config.License and Config.License.Key ~= nil and Config.License.Key ~= ''
+    return Config.License
+        and Config.License.Key ~= nil and Config.License.Key ~= ''
+        and Config.License.DiscordGuildId ~= nil and Config.License.DiscordGuildId ~= ''
 end
 
 -- Turns PerformHttpRequest's callback-based API into something a
@@ -34,8 +48,17 @@ local function HttpAwait(method, url, body, headers, timeoutMs)
     return status, respBody
 end
 
+-- X-Discord-Guild-Id travels on every authenticated call, not just
+-- config sync — the dashboard's requireServerAuth (middleware/auth.js)
+-- is the one choke point every server-facing route already goes
+-- through (config sync, webhook flags, screenshot upload sessions, ban
+-- reports), so binding/checking it there covers all of them at once.
 local function AuthHeaders(extra)
-    local h = { ['X-License-Key'] = Config.License.Key, ['X-License-Secret'] = Config.License.Secret }
+    local h = {
+        ['X-License-Key'] = Config.License.Key,
+        ['X-License-Secret'] = Config.License.Secret,
+        ['X-Discord-Guild-Id'] = Config.License.DiscordGuildId,
+    }
     if extra then for k, v in pairs(extra) do h[k] = v end end
     return h
 end
@@ -61,14 +84,29 @@ local POINTS_MAP = {
     points_invincibility = 'invincibility',
 }
 
-local function ApplyRemoteConfig(jsonStr)
-    local ok, data = pcall(json.decode, jsonStr or '')
-    if not ok or type(data) ~= 'table' then return end
+local function ApplyRemoteConfig(data)
     for remoteKey, localKey in pairs(CONFIG_MAP) do
         if data[remoteKey] ~= nil then Config[localKey] = data[remoteKey] end
     end
     for remoteKey, pointKey in pairs(POINTS_MAP) do
         if data[remoteKey] ~= nil then Config.Points[pointKey] = data[remoteKey] end
+    end
+end
+
+-- Printed once per sync (every 10 minutes) once a plan is within a
+-- week of lapsing, and again the moment it actually has — a buyer
+-- watching their console has real warning before remote config sync
+-- and Discord ban-webhook reporting quietly stop working, not just a
+-- surprise 401 on renewal day. `license` here is the `license` object
+-- the dashboard's /api/server/config now returns (see
+-- hd_anticheat_dashboard_cloudflare/src/routes/config.js) — absent
+-- entirely on an older dashboard deploy that predates plans, in which
+-- case this is silently skipped, same as any other optional field.
+local function WarnIfExpiringSoon(license)
+    if type(license) ~= 'table' or license.daysRemaining == nil then return end -- lifetime plan, or an older dashboard build
+    if license.daysRemaining <= 7 then
+        print(('^3[hd_anticheat]^7 License plan "%s" expires in %d day(s) — renew soon to keep dashboard sync and ban webhooks working.')
+            :format(tostring(license.plan), license.daysRemaining))
     end
 end
 
@@ -86,12 +124,49 @@ function SyncDashboardConfig()
     if not LicenseConfigured() then return end
     CreateThread(function()
         local status, body = HttpAwait('GET', Config.License.DashboardUrl .. '/api/server/config', '', AuthHeaders())
+        local ok, data = pcall(json.decode, body or '')
+        data = (ok and type(data) == 'table') and data or {}
+
         if status == 200 then
-            ApplyRemoteConfig(body)
+            ApplyRemoteConfig(data)
+            WarnIfExpiringSoon(data.license)
+            LicenseStatus = data.license
             print('^2[hd_anticheat]^7 Dashboard config synced.')
+        elseif status == 401 and data.expired then
+            -- Distinct from a generic auth failure on purpose — a lapsed
+            -- 1-month/3-month plan is expected, recoverable, and NOT the
+            -- same problem as a mistyped key/secret. Detection keeps
+            -- running either way (this only ever affects remote config
+            -- sync and Discord ban-webhook reporting) — see this file's
+            -- header for why a blank/invalid license was always a no-op
+            -- rather than something that disables the resource.
+            print('^1[hd_anticheat] ============================================================^7')
+            print(('^1[hd_anticheat] LICENSE EXPIRED: %s^7'):format(tostring(data.error)))
+            print('^1[hd_anticheat] Dashboard config sync and ban webhook reporting are paused until renewed.^7')
+            print('^1[hd_anticheat] Core detection/banning is unaffected — only these remote features.^7')
+            print('^1[hd_anticheat] ============================================================^7')
+            LicenseStatus = { expired = true }
+        elseif status == 401 and data.guildMismatch then
+            -- This license is already bound to a DIFFERENT Discord
+            -- server than the one in this config.lua's
+            -- Config.License.DiscordGuildId — either the wrong guild ID
+            -- got pasted in here, or this key/secret pair was handed to
+            -- a server it wasn't issued for. Not something a re-sync
+            -- fixes on its own; needs the vendor to confirm/unlink it
+            -- dashboard-side (see the license's owner about this).
+            print('^1[hd_anticheat] ============================================================^7')
+            print('^1[hd_anticheat] LICENSE BOUND TO A DIFFERENT DISCORD SERVER.^7')
+            print('^1[hd_anticheat] Config.License.DiscordGuildId does not match the Discord server this license was first activated on.^7')
+            print('^1[hd_anticheat] Dashboard config sync and ban webhook reporting are paused — contact whoever issued this license.^7')
+            print('^1[hd_anticheat] Core detection/banning is unaffected — only these remote features.^7')
+            print('^1[hd_anticheat] ============================================================^7')
+            LicenseStatus = { guildMismatch = true }
+        elseif status == 401 then
+            print('^1[hd_anticheat]^7 Dashboard rejected this license key/secret (check Config.License in config.lua) — using local config.lua values.')
         else
             print(('^3[hd_anticheat]^7 Could not reach dashboard (status %s) — using local config.lua values.'):format(tostring(status)))
         end
+
         FetchWebhookFlags()
     end)
 end

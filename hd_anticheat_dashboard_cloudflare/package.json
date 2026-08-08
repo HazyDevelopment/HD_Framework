@@ -1,0 +1,25 @@
+{
+  "name": "hd_anticheat_dashboard_cloudflare",
+  "version": "1.0.0",
+  "description": "HD AntiCheat Dashboard — Cloudflare Workers build (D1 + R2, no VPS needed).",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "d1:apply": "wrangler d1 execute hd-anticheat-dashboard --remote --file=./schema.sql",
+    "d1:apply:local": "wrangler d1 execute hd-anticheat-dashboard --local --file=./schema.sql",
+    "d1:migrate": "wrangler d1 execute hd-anticheat-dashboard --remote --file=./migrations/0001_add_license_plans.sql",
+    "d1:migrate:local": "wrangler d1 execute hd-anticheat-dashboard --local --file=./migrations/0001_add_license_plans.sql",
+    "d1:migrate2": "wrangler d1 execute hd-anticheat-dashboard --remote --file=./migrations/0002_add_discord_guild_id.sql",
+    "d1:migrate2:local": "wrangler d1 execute hd-anticheat-dashboard --local --file=./migrations/0002_add_discord_guild_id.sql",
+    "mint-license": "node scripts/mint-license.js",
+    "tail": "wrangler tail"
+  },
+  "dependencies": {
+    "hono": "^4.6.3"
+  },
+  "devDependencies": {
+    "wrangler": "^3.78.0"
+  }
+}

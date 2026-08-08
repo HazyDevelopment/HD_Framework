@@ -1,0 +1,33 @@
+name = "hd-anticheat-dashboard"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+
+# Static frontend (public/index.html, dashboard.html, css, js, favicon)
+# served straight from Cloudflare's edge. run_worker_first = true so
+# EVERY request — including "/" — hits the Worker first; index.js then
+# explicitly falls through to ASSETS.fetch() for anything that isn't an
+# /api/* or /uploads/* route. Without that flag, Cloudflare serves
+# matching static files before the Worker ever runs, which is fine for
+# static-only sites but would bypass the Worker's own routing here.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = true
+
+# Create with: wrangler d1 create hd-anticheat-dashboard
+# Then paste the database_id it prints below.
+[[d1_databases]]
+binding = "DB"
+database_name = "hd-anticheat-dashboard"
+database_id = "7f5c0a50-cba1-4b7e-b1fc-8c39a4c1d5eb"
+
+# Create with: wrangler r2 bucket create hd-anticheat-screenshots
+[[r2_buckets]]
+binding = "SCREENSHOTS"
+bucket_name = "hd-anticheat-screenshots"
+
+# Non-secret config. SESSION_JWT_SECRET / UPLOAD_JWT_SECRET / ADMIN_SECRET
+# are NOT set here — they go through `wrangler secret put` instead (see
+# DEPLOY_CLOUDFLARE.md) so they never end up committed in this file.
+[vars]
+PUBLIC_URL = "https://fivem-panel.co.uk"

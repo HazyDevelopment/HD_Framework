@@ -1,0 +1,7 @@
+# Copy to .dev.vars for local `wrangler dev` testing — this file is
+# gitignored and is NEVER used for the real deployment (production
+# secrets go through `wrangler secret put`, see DEPLOY_CLOUDFLARE.md).
+
+SESSION_JWT_SECRET=change-me
+UPLOAD_JWT_SECRET=change-me-too
+ADMIN_SECRET=
