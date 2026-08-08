@@ -2,17 +2,15 @@ Config = {}
 
 -- ═══════════════════════════════════════════════════════════════════
 --  HD ADMIN | HAZY DEVELOPMENT | v1.0.0
---  /admin opens the panel for staff only — gated on the same
---  `hd.admin` ACE permission every other admin command in this
---  framework already uses (HD_Framework's /addmoney, /setjob,
---  /givevehicle, hd_society's /addfunds). One permission to grant in
---  server.cfg, not a separate staff system to maintain.
+--  /admin opens the panel for staff only — gated on a Discord role,
+--  not an ACE permission (see the DISCORD ROLE ADMIN section below for
+--  full setup).
 --
 --  The NUI only ever opening for admins is a UX nicety, not the real
---  gate — every single action re-checks IsPlayerAceAllowed(src,
---  Config.Permission) server-side on its own, same as everywhere else
---  in this build. A player who somehow forces the NUI open without
---  the ACE grant still can't actually do anything through it.
+--  gate — every single action re-checks IsAdmin(src) server-side on
+--  its own, same as everywhere else in this build. A player who
+--  somehow forces the NUI open without the Discord role still can't
+--  actually do anything through it.
 -- ═══════════════════════════════════════════════════════════════════
 
 Config.Command = 'admin'
